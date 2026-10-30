@@ -109,7 +109,7 @@ def prepare_pw_input(
         DFTTask.RELAX: {DFTOutput.TOTAL_ENERGY, DFTOutput.FORCES, DFTOutput.STRESS},
         DFTTask.VC_RELAX: {DFTOutput.TOTAL_ENERGY, DFTOutput.FORCES, DFTOutput.STRESS},
         DFTTask.BANDS: {DFTOutput.BAND_STRUCTURE},
-        DFTTask.DOS: {DFTOutput.DENSITY_OF_STATES},
+        DFTTask.DOS: {DFTOutput.DENSITY_OF_STATES, DFTOutput.PROJECTED_DOS},
     }[settings.task]
     unsupported = set(settings.requested_outputs).difference(supported_outputs)
     if unsupported:
@@ -364,5 +364,43 @@ def prepare_qe_dos_postprocess_input(
         warnings=(
             "dos.x input assumes a completed compatible SCF/NSCF workflow in the same prefix and outdir.",
             "This helper prepares input only; it does not execute dos.x or parse its output.",
+        ),
+    )
+
+
+def prepare_qe_projected_dos_postprocess_input(
+    settings: DFTCalculationSettings,
+    *,
+    prefix: str = "molecular_lab",
+    outdir: str = "./tmp",
+    pdos_prefix: str = "molecular_lab.pdos",
+) -> PreparedQEPostprocessInput:
+    """Prepare projwfc.x input after a compatible SCF and NSCF calculation."""
+    if settings.task is not DFTTask.DOS or settings.dos is None:
+        raise QuantumEspressoInputError("projected DOS requires a DOS task with DOSSettings")
+    prefix = _token(prefix, "prefix")
+    if not pdos_prefix or any(c in pdos_prefix for c in ("\n", "\r", "'", "!")):
+        raise QuantumEspressoInputError("pdos_prefix must be a safe non-empty filename prefix")
+    dos = settings.dos
+    delta_ev = (dos.energy_max_ev - dos.energy_min_ev) / (dos.points - 1)
+    text = "\n".join([
+        "&PROJWFC",
+        f"  prefix = '{prefix}'",
+        f"  outdir = {_quoted_path(outdir, 'outdir')}",
+        f"  filpdos = '{pdos_prefix}'",
+        f"  Emin = {_number(dos.energy_min_ev)}",
+        f"  Emax = {_number(dos.energy_max_ev)}",
+        f"  DeltaE = {_number(delta_ev)}",
+        f"  degauss = {_number(dos.broadening_ev / _RY_EV)}",
+        "  ngauss = 0",
+        "/",
+        "",
+    ])
+    return PreparedQEPostprocessInput(
+        input_text=text,
+        required_saved_calculation=f"{outdir.rstrip('/')}/{prefix}.save",
+        warnings=(
+            "projwfc.x requires compatible saved NSCF wavefunctions in the same prefix and outdir.",
+            "Atomic projections depend on the pseudopotential's atomic wavefunctions and are not a unique observable decomposition.",
         ),
     )
