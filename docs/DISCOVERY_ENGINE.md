@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 10 -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 11 -->
 
 # Discovery Engine
 
@@ -87,7 +87,9 @@ The current prototype is intentionally restricted:
 
 The heavy-atom tree topologies are generated from Prüfer sequences. Equivalent assignments among identical element symbols are deduplicated within the canonicalization search bound. The expanded generator can propose saturated structures such as H2O, H2O2, CH4, and C2H6O, as well as simple unsaturated structures such as C2H4, C2H2, CH2O, and CO2 when they fit the fixed-valence tree model. Bond-order assignments are bounded by `max_assignments` to prevent uncontrolled combinatorial growth.
 
-The unicyclic generator adds one non-tree edge to a connected tree, producing a connected heavy-atom graph with exactly one independent cycle. It can represent simple three-, four-, five-, and six-membered rings as well as a single ring with acyclic substituents, subject to atom count, valence, formula, and search bounds. It does **not** yet cover fused rings, bridged or spiro systems, multiple independent rings, aromaticity, resonance, charged species, radicals, hypervalent chemistry, coordination compounds, or elements outside the listed set. A composition that produces no graph means “not generated within this prototype's scope,” not “chemically impossible.”
+The unicyclic generator adds one non-tree edge to a connected tree, producing a connected heavy-atom graph with exactly one independent cycle. It can represent simple three-, four-, five-, and six-membered rings as well as a single ring with acyclic substituents, subject to atom count, valence, formula, and search bounds. Simple cycles are enumerated before general ring-plus-substituent topologies so small ring systems are not crowded out by the larger topology search. For example, C6H6 can be proposed as a six-membered ring with alternating single/double (Kekule) bonds. When RDKit is available, the structure-identification adapter reports whether RDKit perceives aromatic atoms and bonds after sanitization. This is an aromaticity *recognition* step on a Kekule graph, not a general resonance-structure generator or a quantum-chemical aromaticity calculation.
+
+It does **not** yet cover fused rings, bridged or spiro systems, multiple independent rings, charged species, radicals, hypervalent chemistry, coordination compounds, or elements outside the listed set. A composition that produces no graph means “not generated within this prototype's scope,” not “chemically impossible.”
 
 A proposed graph is only a connectivity hypothesis. It is not a 3D geometry, optimized structure, energy minimum, stability prediction, experimental observation, or synthesis guarantee.
 
@@ -175,7 +177,7 @@ Implemented:
 - Initial electron-count and formal oxidation-state diagnostics.
 - Backend-neutral molecular atom, bond, and graph records.
 - Restricted neutral saturated and bond-order-aware acyclic graph proposal prototypes.
-- Bounded neutral unicyclic graph proposal prototype with single, double, and triple bonds.
+- Bounded neutral unicyclic graph proposal prototype with simple-cycle-first enumeration and single, double, and triple bonds; optional RDKit aromaticity reporting after graph sanitization.
 - Graph-to-catalogue identification adapter with optional RDKit canonical SMILES/InChIKey generation and formula-only fallback.
 - Integrated bounded forward molecular discovery pipeline combining enumeration, advisory diagnostics, catalogue lookup, graph proposals, and structure identification.
 
@@ -183,7 +185,7 @@ Not implemented:
 - General-purpose molecular graph generation beyond the stated prototype scope.
 - RDKit installation/configuration in a packaged application environment; the adapter is optional and lazy-loaded.
 - Periodic/crystal structure generation and periodic-only forward discovery.
-- Fused, bridged, spiro, or multi-ring graph generation; aromatic, radical, charged, hypervalent, or coordination graph generation.
+- Fused, bridged, spiro, or multi-ring graph generation; general resonance enumeration; radical, charged, hypervalent, or coordination graph generation. Aromaticity is only recognized opportunistically by RDKit for supported Kekule graphs.
 - Crystal structure generation.
 - 3D geometry generation/optimization, stability assessment, or material-property calculations.
 
