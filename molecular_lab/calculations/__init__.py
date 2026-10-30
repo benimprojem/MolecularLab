@@ -10,6 +10,8 @@ from molecular_lab.calculations.dft_settings import (
 )
 
 __all__ = [
+    "ASEBridgeError", "ASEUnavailableError", "ASEUnsupportedStructureError",
+    "ase_availability", "to_ase_atoms",
     "ConvergenceSettings", "DFTCalculationSettings", "DFTOutput", "DFTTask",
     "EnergyCutoff", "EnergyUnit", "KPointMesh", "KPointScheme",
     "PseudopotentialReference", "SmearingScheme", "SmearingSettings",
