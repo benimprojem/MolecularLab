@@ -44,7 +44,11 @@ The four initial domains are electronic structure, electrical transport, magneti
 
 Backend-independent crystal, site, and defect records are implemented in `molecular_lab/structures/crystal.py`. They preserve row-vector lattice geometry in angstrom, fractional atomic coordinates, per-site occupancy, per-axis periodic boundary conditions, optional magnetic/oxidation metadata, and explicit vacancy/substitution/interstitial/antisite annotations. These are structural records only: defect annotations do not build supercells or calculate formation energies. See [CRYSTAL_STRUCTURES.md](CRYSTAL_STRUCTURES.md).
 
-## Electronic-structure result contract\n\nThe initial electronic-structure records live in molecular_lab/materials/electronic_structure.py. They retain k-point coordinates/weights, spin-resolved band energies, optional occupation arrays, Fermi level, direct and indirect band-edge estimates, and total/projected DOS grids. The band-gap helper reports metallic or undetermined states explicitly when occupations, Fermi-level information, or sampled edges do not support a gap estimate. It does not run DFT, interpolate bands, or establish experimental conductivity. See [ELECTRONIC_STRUCTURE.md](ELECTRONIC_STRUCTURE.md) for schema and limitations.\n\n## Adapter boundary and execution rules
+## Electronic-structure result contract
+
+The initial electronic-structure records live in molecular_lab/materials/electronic_structure.py. They retain k-point coordinates/weights, spin-resolved band energies, optional occupation arrays, Fermi level, direct and indirect band-edge estimates, and total/projected DOS grids. The band-gap helper reports metallic or undetermined states explicitly when occupations, Fermi-level information, or sampled edges do not support a gap estimate. It does not run DFT, interpolate bands, or establish experimental conductivity. See [ELECTRONIC_STRUCTURE.md](ELECTRONIC_STRUCTURE.md) for schema and limitations.
+
+## Adapter boundary and execution rules
 
 Each optional adapter implements a capability declaration, an availability check, and a run method. Adapter-specific packages are imported only by their adapter modules; the common protocol uses the Python standard library and does not require optional scientific software.
 
