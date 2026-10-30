@@ -1,7 +1,7 @@
 # DFT Execution Layer
 
-**Status:** Execution prototype with variable-cell relaxation  
-**Scope:** SCF, fixed-cell RELAX and VC_RELAX for Quantum ESPRESSO and GPAW
+**Status:** QE electronic post-processing execution prototype  
+**Scope:** SCF, fixed-cell RELAX and VC_RELAX for QE/GPAW; BANDS and total DOS workflows for QE
 
 ## Separation of responsibilities
 
@@ -51,7 +51,7 @@ The returned `DFTExecutionResult` has a consistent status, energy in eV, backend
 
 ## Deliberate limitations
 
-- BANDS/DOS input preparation exists for QE, but BANDS/DOS execution orchestration and normalized output parsing are not part of the common execution API yet. Charge density, magnetic moments, and other post-SCF workflows are also unsupported.
+- QE BANDS and total DOS now execute as sequential workflows and populate common result records. GPAW BANDS/DOS, spin-polarized BANDS, projected DOS, charge density, magnetic moments, and other post-SCF workflows remain unsupported.
 - No automatic MPI launch, scheduler integration, cancellation, resource estimation, or checkpoint/restart is implemented.
 - QE execution assumes the conventional local `pseudo` directory.
 - GPAW optimizer execution requires an explicit force threshold; the application does not invent one.
@@ -64,3 +64,18 @@ The returned `DFTExecutionResult` has a consistent status, energy in eV, backend
 The common `stress_gpa` tensor is expressed in GPa with tension positive. QE's printed hydrostatic pressure convention is compression positive, so its parsed kbar tensor is negated before conversion to GPa. GPAW values returned through ASE are already in ASE's stress convention and are converted from eV/angstrom^3 using 1 eV/angstrom^3 = 160.21766208 GPa.
 
 The stress tolerance is an explicit request parameter, not an application-selected default. QE maps the requested tolerance to its native `press_conv_thr` pressure criterion; this is not represented as an independent component-by-component stress residual test in the common layer. GPAW's final stress residual is checked component-by-component against the requested external pressure after ASE optimization. The output convention is shared, but backend stopping criteria are not numerically interchangeable.
+
+
+## QE BANDS workflow
+
+execute_dft_calculation("qe", structure, bands_settings, working_directory=...) runs three gated stages: prerequisite SCF, non-self-consistent pw.x BANDS along the explicit BandPath, and bands.x. The workflow expects the generated filband.gnu file and parses it into BandStructureData. QE documents the .gnu band output in eV and path coordinates; MolecularLab labels the first coordinate as path_distance, not as a 3D reciprocal vector. [QE bands.x reference](https://www.quantum-espresso.org/Doc/INPUT_BANDS.html).
+
+The current workflow rejects spin-polarized BANDS rather than silently merging spin channels. The parsed .gnu data does not contain occupations; a Fermi level is attached only when QE explicitly reports one. A gap assessment can therefore remain undetermined for insulating calculations whose output does not provide a usable Fermi level.
+
+## QE total-DOS workflow
+
+execute_dft_calculation("qe", structure, dos_settings, working_directory=...) runs prerequisite SCF, uniform-grid NSCF, and dos.x in sequence. The expected total-DOS file is parsed into DensityOfStatesData; energy is stored in eV and DOS in states/eV as specified by QE. [QE dos.x reference](https://www.quantum-espresso.org/Doc/INPUT_DOS.html).
+
+For spin-polarized DOS, the parser stores the up/down columns separately. Extra integrated-DOS columns are not currently retained. Projected DOS is not part of this workflow.
+
+Both workflows stop when any prerequisite process fails, times out, does not report normal completion, or fails to produce a parseable result file. The automated test suite mocks the external executables; a real QE installation, compatible pseudopotentials, and converged scientific settings are still required for actual calculations.
