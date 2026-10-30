@@ -211,7 +211,7 @@ def test_qe_fatband_workflow_runs_projwfc_and_joins_original_state_weights(tmp_p
     Atomic states used for projection
     state # 1: atom 1 (Si), wfc 1 (l=0 m=0)
     state # 2: atom 1 (Si), wfc 2 (l=2 m=0)
-    state # 3: atom 2 (O), wfc 1 (l=1 m=1)
+    state # 3: atom 1 (Si), wfc 3 (l=1 m=1)
     k = 0.0000000000 0.0000000000 0.0000000000
     ==== e(   1) = -1.00000 eV ====
     ==== e(   2) =  1.00000 eV ====
