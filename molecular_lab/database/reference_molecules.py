@@ -100,6 +100,8 @@ def lookup_by_formula(
         if isinstance(formula_or_composition, str)
         else formula_or_composition
     )
+    if composition.net_charge != 0:
+        return ()
     target = dict(composition.counts)
     return tuple(
         record
