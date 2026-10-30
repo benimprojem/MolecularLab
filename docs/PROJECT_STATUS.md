@@ -207,3 +207,21 @@ commit `436ad12b69ca5412b64c812d3a4ba875f26755f1`. Both RDKit-enabled and
 no-RDKit jobs passed. The new example test imports the script and verifies the
 primitive diamond silicon cell builder. The real QE solver itself remains
 unrun.
+
+
+## 10. QE smoke-test provenance hardening (2026-10-30)
+
+- The silicon example now writes `results/run_manifest.json` with QE result
+  status/version/return code, energy, cell and atomic coordinates, pseudopotential
+  source/license/family/SHA-256, cutoff values, SCF mesh and exact band-path
+  vertices.
+- Captures the execution result's stdout and stderr into separate files beside
+  the SVG, including when the solver workflow returns a failure status.
+- Added an optional pseudopotential license argument so the run record can
+  preserve provenance/usage terms.
+- Extracted the silicon smoke-test path builder and added tests for its
+  fractional reciprocal coordinates, labels, sample count and invalid sampling.
+- Fixed JSON manifest newline serialization.
+- These changes improve reproducibility and diagnostics; they do not substitute
+  for a real QE run. The solver execution and scientific convergence remain
+  pending.
