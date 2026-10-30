@@ -18,13 +18,14 @@ Implementation: `molecular_lab/calculations/quantum_espresso.py`.
 
 ## Explicitly unsupported
 
-- BANDS and DOS tasks: these require separate band-path and multi-stage SCF/NSCF/DOS workflows
+- BANDS and DOS are now supported at the input-preparation level: BANDS uses an explicit reciprocal-space path and `bands.x`; DOS prepares an NSCF `pw.x` deck and a `dos.x` post-processing input. Execution orchestration and output parsing are not yet implemented.
 - Spin-orbit coupling: the pseudopotential model does not yet state whether a file is fully relativistic
 - Site-resolved initial magnetic moments: QE species-level magnetic initialization needs a deliberate species/sublattice mapping
 - Gamma-centered meshes: only Monkhorst-Pack is currently translated
 - Partial occupancy and defect annotations: the ASE bridge requires an explicit ordered, fully occupied structure
 - Non-3D VC-RELAX cell constraints
 - Charge-density and magnetic-moment output extraction
+- Automated multi-stage execution and normalized band/DOS output parsing
 
 Unsupported requests raise `QuantumEspressoInputError`; they are not silently omitted.
 
@@ -54,3 +55,12 @@ print(prepared.required_pseudopotentials)
 ## Scientific boundary
 
 A generated input file is only a calculation request. It is not evidence that the selected pseudopotentials, functional, cutoff, k-point mesh, magnetic state, or convergence settings are scientifically adequate. Convergence testing and independent validation remain necessary.
+
+
+## Band structure and DOS input preparation
+
+For BANDS, supply a structured `BandPath` with fractional reciprocal coordinates, readable point labels, and a subdivision count for each segment. QE input generation emits `calculation='bands'` with `K_POINTS crystal_b`; a separate `bands.x` namelist can be prepared for the same prefix/outdir. A legacy `band_path_ref` is metadata only and is not enough to generate a QE path.
+
+For total DOS, supply `DOSSettings` with an explicit energy window, grid size, and broadening in eV. The QE `pw.x` input is prepared as an NSCF stage using the configured uniform k-point mesh. A separate `dos.x` input is generated with energy bounds and grid spacing in eV; broadening is converted to Ry as required by QE. The caller must first complete the prerequisite SCF calculation and then the NSCF calculation with a consistent prefix/outdir.
+
+These functions prepare input text only. They do not launch `pw.x`, `bands.x`, or `dos.x`, parse band/DOS output files, or assert convergence.
