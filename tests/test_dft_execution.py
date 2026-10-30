@@ -3,7 +3,7 @@ import subprocess
 import pytest
 
 from molecular_lab.calculations.dft_settings import (
-    DFTCalculationSettings, DFTOutput, DFTTask, EnergyCutoff, EnergyUnit,
+    ConvergenceSettings, DFTCalculationSettings, DFTOutput, DFTTask, EnergyCutoff, EnergyUnit,
     KPointMesh, KPointScheme, PseudopotentialReference,
 )
 from molecular_lab.calculations import quantum_espresso as qe_module
@@ -168,20 +168,20 @@ def test_qe_relax_returns_final_structure_forces_and_energy(tmp_path, monkeypatc
         (tmp_path / "pseudo" / name).write_text("test pseudo")
     monkeypatch.setattr("molecular_lab.calculations.execution.shutil.which", lambda _: "/usr/bin/pw.x")
     output = (
-        "Program PWSCF v.7.3 starts\\n"
-        "! total energy = -12.00000000 Ry\\n"
-        "Forces acting on atoms (cartesian axes, Ry/au):\\n"
-        " atom 1 type 1 force = 0.001 0.000 0.000\\n"
-        " atom 2 type 2 force = -0.001 0.000 0.000\\n"
-        "bfgs converged in 4 scf cycles and 3 bfgs steps\\n"
-        "Begin final coordinates\\n"
-        "CELL_PARAMETERS (angstrom)\\n"
-        "5.6 0 0\\n0 5.6 0\\n0 0 5.6\\n"
-        "ATOMIC_POSITIONS (crystal)\\n"
-        "Na 0.01 0.00 0.00\\n"
-        "Cl 0.49 0.50 0.50\\n"
-        "End final coordinates\\n"
-        "JOB DONE.\\n"
+        "Program PWSCF v.7.3 starts\n"
+        "! total energy = -12.00000000 Ry\n"
+        "Forces acting on atoms (cartesian axes, Ry/au):\n"
+        " atom 1 type 1 force = 0.001 0.000 0.000\n"
+        " atom 2 type 2 force = -0.001 0.000 0.000\n"
+        "bfgs converged in 4 scf cycles and 3 bfgs steps\n"
+        "Begin final coordinates\n"
+        "CELL_PARAMETERS (angstrom)\n"
+        "5.6 0 0\n0 5.6 0\n0 0 5.6\n"
+        "ATOMIC_POSITIONS (crystal)\n"
+        "Na 0.01 0.00 0.00\n"
+        "Cl 0.49 0.50 0.50\n"
+        "End final coordinates\n"
+        "JOB DONE.\n"
     )
     monkeypatch.setattr(
         "molecular_lab.calculations.execution.subprocess.run",
@@ -189,10 +189,7 @@ def test_qe_relax_returns_final_structure_forces_and_energy(tmp_path, monkeypatc
     )
     value = make_settings(
         task=DFTTask.RELAX,
-        convergence=__import__(
-            "molecular_lab.calculations.dft_settings",
-            fromlist=["ConvergenceSettings"],
-        ).ConvergenceSettings(force_tolerance_ev_per_angstrom=0.03),
+        convergence=ConvergenceSettings(force_tolerance_ev_per_angstrom=0.03),
         requested_outputs=(DFTOutput.TOTAL_ENERGY, DFTOutput.FORCES),
     )
     result = execute_quantum_espresso(
