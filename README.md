@@ -1,7 +1,7 @@
 <!--
 Project: Molecular Lab
 Version: 0.1
-Rev.: 03
+Rev.: 04
 Status: Initial project foundation
 -->
 
@@ -153,6 +153,7 @@ MolecularLab/
 - [x] Implement bounded, deterministic composition enumeration (chemical plausibility filtering remains pending).
 - [x] Add initial composition-level electron-count and limited oxidation-state diagnostics (advisory only).
 - [x] Add a small offline reference-molecule catalogue with formula, synonym, and InChIKey lookup.
+- [x] Connect restricted graph proposals to catalogue matching, with optional RDKit canonical SMILES/InChIKey generation and formula-only fallback.
 - [ ] Expand structure generation and validation beyond the restricted prototype.
 - [ ] Add optional PubChem synchronization/import with rate limits, caching, and provenance retention.
 - [ ] Integrate the first calculation backend.
