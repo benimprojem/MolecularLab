@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 12 -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 13 -->
 
 # Discovery Engine
 
@@ -74,7 +74,7 @@ The graph record validates unique atom IDs, valid bond endpoints, and duplicate 
 
 ### 2.6 Restricted molecular graph proposals — prototype implemented
 
-`molecular_lab/engines/molecular_graphs.py` provides `iter_saturated_acyclic_graphs` (the original compatibility prototype), `iter_acyclic_graphs` (the expanded bond-order-aware generator), `iter_unicyclic_graphs` (a bounded single-cycle generator), and `iter_linear_fused_acene_graphs` (a narrowly scoped fused-ring generator for linear acenes).
+`molecular_lab/engines/molecular_graphs.py` provides `iter_saturated_acyclic_graphs` (the original compatibility prototype), `iter_acyclic_graphs` (the expanded bond-order-aware generator), `iter_unicyclic_graphs` (a bounded single-cycle generator), and `iter_linear_fused_acene_graphs` (the compatibility generator for linear acenes), and `iter_fused_benzenoid_graphs` (a registered-layout generator for naphthalene, anthracene, phenanthrene, and bounded longer linear acenes).
 
 The current prototype is intentionally restricted:
 
@@ -89,7 +89,7 @@ The heavy-atom tree topologies are generated from Prüfer sequences. Equivalent 
 
 The unicyclic generator adds one non-tree edge to a connected tree, producing a connected heavy-atom graph with exactly one independent cycle. It can represent simple three-, four-, five-, and six-membered rings as well as a single ring with acyclic substituents, subject to atom count, valence, formula, and search bounds. Simple cycles are enumerated before general ring-plus-substituent topologies so small ring systems are not crowded out by the larger topology search. For example, C6H6 can be proposed as a six-membered ring with alternating single/double (Kekule) bonds. When RDKit is available, the structure-identification adapter reports whether RDKit perceives aromatic atoms and bonds after sanitization. This is an aromaticity *recognition* step on a Kekule graph, not a general resonance-structure generator or a quantum-chemical aromaticity calculation.
 
-`iter_linear_fused_acene_graphs` builds consecutive six-membered carbon rings that share one edge, using a fixed topology for linear acenes. It currently targets formulas such as naphthalene (C10H8) and anthracene (C14H10), and enumerates perfect matchings of the carbon skeleton to create Kekulé bond-order representations. Every carbon receives one incident double bond in each such representation; RDKit may then perceive the fused aromatic system. Multiple Kekulé outputs for the same acene are resonance representations, not separate constitutional isomers. This generator is not a general fused-ring enumerator: angularly fused systems, heteroaromatics, substituted acenes, bridged or spiro systems, and arbitrary multi-ring graphs remain unsupported. Charged species, radicals, hypervalent chemistry, coordination compounds, and elements outside the listed set also remain outside the current graph prototypes. A composition that produces no graph means “not generated within this prototype's scope,” not “chemically impossible.”
+`iter_fused_benzenoid_graphs` constructs registered unions of edge-sharing six-membered carbon rings. Current templates include naphthalene (C10H8), linear anthracene (C14H10), angular phenanthrene (C14H10), and longer linear acenes within the configured atom bound. It enumerates perfect matchings of each carbon skeleton to create Kekulé bond-order representations. Every carbon receives one incident double bond in each such representation; RDKit may then perceive the fused aromatic system. Multiple Kekulé outputs for the same topology are resonance representations, not separate constitutional isomers. Anthracene and phenanthrene share a formula but have different ring layouts and can be distinguished by canonical structure identifiers. This remains a template-based benzenoid prototype, not a general fused-ring enumerator: arbitrary angular layouts, heteroaromatics, substituted systems, bridged or spiro systems, and arbitrary multi-ring graphs remain unsupported. Charged species, radicals, hypervalent chemistry, coordination compounds, and elements outside the listed set also remain outside the current graph prototypes. A composition that produces no graph means “not generated within this prototype's scope,” not “chemically impossible.”
 
 A proposed graph is only a connectivity hypothesis. It is not a 3D geometry, optimized structure, energy minimum, stability prediction, experimental observation, or synthesis guarantee.
 
@@ -114,7 +114,7 @@ For each bounded composition, the workflow:
 4. Runs each proposed graph through the optional structure-identification adapter.
 5. Returns one `ForwardDiscoveryResult` containing the composition, diagnostics, reference lookup, graphs, identifiers, and explicit graph-generation status.
 
-The workflow is bounded by `max_compositions`, `max_graphs_per_composition`, `max_heavy_atoms`, and `max_graph_assignments` (the last bounds bond-order combinations examined per composition in each graph family). It is lazy through `iter_forward_discovery`; `run_forward_discovery` materializes the bounded results as a tuple.
+The workflow is bounded by `max_compositions`, `max_graphs_per_composition`, `max_heavy_atoms`, and `max_graph_assignments` (the last bounds bond-order combinations examined per composition in each graph family), and `max_fused_heavy_atoms` (a separate atom bound for the fused-benzenoid templates). It is lazy through `iter_forward_discovery`; `run_forward_discovery` materializes the bounded results as a tuple.
 
 Diagnostics are advisory and do not automatically reject compositions. A composition outside the graph prototype's scope remains visible with `no_graph_within_prototype_scope`; charged and formula-unit records are also retained with explicit statuses rather than being misreported as impossible. Periodic-only searches are rejected because crystal structure generation is not implemented.
 
@@ -151,7 +151,7 @@ The output includes compositions that have no graph proposal under the current p
 
 ## 3. Formula-based exploration
 
-When a fixed formula is supplied, the engine should preserve its atom counts and explore only structures consistent with those counts. As coverage expands, this will include connectivity, isomers, conformers, and geometries. Current graph proposals cover the restricted acyclic and unicyclic domains plus the linear fused-acene family described above.
+When a fixed formula is supplied, the engine should preserve its atom counts and explore only structures consistent with those counts. As coverage expands, this will include connectivity, isomers, conformers, and geometries. Current graph proposals cover the restricted acyclic and unicyclic domains plus the registered fused-benzenoid layouts described above.
 
 ## 4. Inverse discovery
 
@@ -178,7 +178,7 @@ Implemented:
 - Backend-neutral molecular atom, bond, and graph records.
 - Restricted neutral saturated and bond-order-aware acyclic graph proposal prototypes.
 - Bounded neutral unicyclic graph proposal prototype with simple-cycle-first enumeration and single, double, and triple bonds; optional RDKit aromaticity reporting after graph sanitization.
-- Bounded carbon-only linear fused-acene graph prototype, generating naphthalene/anthracene-family Kekulé representations through perfect matching of the fused-ring carbon skeleton.
+- Bounded carbon-only fused-benzenoid graph prototype with registered naphthalene, anthracene, phenanthrene, and longer linear-acene layouts; Kekulé assignments are generated by perfect matching of the fused-ring carbon skeleton.
 - Graph-to-catalogue identification adapter with optional RDKit canonical SMILES/InChIKey generation and formula-only fallback.
 - Integrated bounded forward molecular discovery pipeline combining enumeration, advisory diagnostics, catalogue lookup, graph proposals, and structure identification.
 
@@ -186,7 +186,7 @@ Not implemented:
 - General-purpose molecular graph generation beyond the stated prototype scope.
 - RDKit installation/configuration in a packaged application environment; the adapter is optional and lazy-loaded.
 - Periodic/crystal structure generation and periodic-only forward discovery.
-- General fused-ring, bridged, spiro, and arbitrary multi-ring graph generation; general resonance enumeration; radical, charged, hypervalent, or coordination graph generation. Fused-ring support is currently limited to linear carbon acenes. Aromaticity is only recognized opportunistically by RDKit for supported Kekule graphs.
+- General fused-ring, bridged, spiro, and arbitrary multi-ring graph generation; general resonance enumeration; radical, charged, hypervalent, or coordination graph generation. Fused-ring support is currently limited to registered carbon benzenoid templates. Aromaticity is only recognized opportunistically by RDKit for supported Kekule graphs.
 - Crystal structure generation.
 - 3D geometry generation/optimization, stability assessment, or material-property calculations.
 
