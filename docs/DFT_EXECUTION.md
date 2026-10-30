@@ -51,7 +51,7 @@ The returned `DFTExecutionResult` has a consistent status, energy in eV, backend
 
 ## Deliberate limitations
 
-- Bands, DOS, charge density, magnetic moments, and post-SCF workflows are not part of the common execution API yet.
+- BANDS/DOS input preparation exists for QE, but BANDS/DOS execution orchestration and normalized output parsing are not part of the common execution API yet. Charge density, magnetic moments, and other post-SCF workflows are also unsupported.
 - No automatic MPI launch, scheduler integration, cancellation, resource estimation, or checkpoint/restart is implemented.
 - QE execution assumes the conventional local `pseudo` directory.
 - GPAW optimizer execution requires an explicit force threshold; the application does not invent one.
