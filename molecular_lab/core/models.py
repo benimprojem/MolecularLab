@@ -258,3 +258,52 @@ class Candidate:
         if not self.candidate_id.strip():
             raise ValueError("candidate_id cannot be empty")
         object.__setattr__(self, "evidence", tuple(self.evidence))
+
+
+@dataclass(frozen=True, slots=True)
+class FragmentPort:
+    """A declared attachment site on a molecular fragment."""
+    port_id: str
+    atom_id: int
+    allowed_bond_orders: tuple[int, ...] = (1,)
+    label: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.port_id.strip():
+            raise ValueError("port_id cannot be empty")
+        if isinstance(self.atom_id, bool) or not isinstance(self.atom_id, int) or self.atom_id < 0:
+            raise ValueError("atom_id must be a non-negative integer")
+        orders = tuple(self.allowed_bond_orders)
+        if not orders or any(
+            isinstance(order, bool) or not isinstance(order, int) or order not in (1, 2, 3)
+            for order in orders
+        ):
+            raise ValueError("allowed_bond_orders must contain 1, 2, or 3")
+        if len(orders) != len(set(orders)):
+            raise ValueError("allowed_bond_orders cannot contain duplicates")
+        object.__setattr__(self, "allowed_bond_orders", orders)
+
+
+@dataclass(frozen=True, slots=True)
+class MolecularFragment:
+    """Reusable molecular subgraph with explicit, provenance-aware ports."""
+    fragment_id: str
+    name: str
+    version: str
+    graph: MolecularGraph
+    ports: tuple[FragmentPort, ...]
+    source: str
+    description: str = ""
+
+    def __post_init__(self) -> None:
+        for field_name in ("fragment_id", "name", "version", "source"):
+            if not getattr(self, field_name).strip():
+                raise ValueError(f"{field_name} cannot be empty")
+        ports = tuple(self.ports)
+        object.__setattr__(self, "ports", ports)
+        port_ids = [port.port_id for port in ports]
+        if len(port_ids) != len(set(port_ids)):
+            raise ValueError("fragment port IDs must be unique")
+        atom_ids = {atom.atom_id for atom in self.graph.atoms}
+        if any(port.atom_id not in atom_ids for port in ports):
+            raise ValueError("fragment port references an unknown atom ID")
