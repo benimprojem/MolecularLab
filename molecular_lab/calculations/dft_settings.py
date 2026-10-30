@@ -235,6 +235,7 @@ class DFTCalculationSettings:
     band_path: BandPath | None = None
     dos: DOSSettings | None = None
     notes: str = ""
+    charge_density_cutoff: EnergyCutoff | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.task, DFTTask):
@@ -247,6 +248,11 @@ class DFTCalculationSettings:
             raise TypeError("kpoint_mesh must be a KPointMesh")
         if not isinstance(self.convergence, ConvergenceSettings):
             raise TypeError("convergence must be ConvergenceSettings")
+        if self.charge_density_cutoff is not None:
+            if not isinstance(self.charge_density_cutoff, EnergyCutoff):
+                raise TypeError("charge_density_cutoff must be an EnergyCutoff or None")
+            if self.charge_density_cutoff.value_ev < self.energy_cutoff.value_ev:
+                raise ValueError("charge_density_cutoff must be greater than or equal to energy_cutoff")
         pseudo = dict(self.pseudopotentials)
         if any(not isinstance(value, PseudopotentialReference) for value in pseudo.values()):
             raise TypeError("pseudopotentials must contain PseudopotentialReference values")
