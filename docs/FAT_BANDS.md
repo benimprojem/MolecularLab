@@ -89,7 +89,9 @@ The standard `band_structure` result is still populated from `bands.x`.
 The fat-band energies are deliberately taken from the `projwfc.x` eigenstate
 output, not copied from `bands.x` reordered curves. QE's `bands.x` can reorder
 states to improve band continuity; raw projection coefficients are indexed by
-the original `pw.x` state ordering. Pairing those arrays solely by a reordered
+the original `pw.x` state ordering. Fractional path coordinates are reconstructed
+from the exact `BandPath` supplied to `pw.x`; the parser does not assume a unit
+convention for the k-vector text printed by `projwfc.x`. Pairing those arrays solely by a reordered
 band number can assign an orbital weight to the wrong energy at a crossing.
 The two representations are therefore kept distinct until a state-tracking
 layer can establish a verified mapping.
