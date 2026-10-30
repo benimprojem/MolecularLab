@@ -357,3 +357,61 @@ def test_qe_bands_preflight_does_not_require_projwfc_for_plain_bands(tmp_path, m
     )
 
     assert result is None
+
+
+def test_qe_fatband_workflow_stops_on_cross_source_spectrum_mismatch(tmp_path, monkeypatch):
+    from dataclasses import replace
+
+    patch_scf(monkeypatch)
+    settings = replace(
+        bands_settings(),
+        requested_outputs=(DFTOutput.BAND_STRUCTURE, DFTOutput.FAT_BAND_STRUCTURE),
+    )
+    band_data = SimpleNamespace(kpoints=((0.0, 0.0, 0.0), (0.5, 0.0, 0.0)))
+    original_state_bands = SimpleNamespace(kpoints=((0.0, 0.0, 0.0), (0.5, 0.0, 0.0)))
+    validation_calls = []
+    dataset_calls = []
+
+    monkeypatch.setattr(execution, "parse_qe_fermi_level", lambda output: 0.0)
+    monkeypatch.setattr(execution, "parse_qe_bands_gnu", lambda *args, **kwargs: band_data)
+    monkeypatch.setattr(
+        execution, "parse_qe_projwfc_band_output",
+        lambda *args, **kwargs: original_state_bands,
+    )
+    monkeypatch.setattr(execution, "parse_qe_atomic_proj_xml", lambda *args, **kwargs: object())
+
+    def reject_mismatch(left, right):
+        validation_calls.append((left, right))
+        raise ValueError("per-k-point eigenvalue spectra differ at k-point 2")
+
+    monkeypatch.setattr(execution, "validate_band_energy_spectra", reject_mismatch)
+    monkeypatch.setattr(
+        execution, "build_fatband_dataset",
+        lambda *args, **kwargs: dataset_calls.append(True),
+    )
+
+    def run(executable, input_text, *, workdir, **kwargs):
+        if executable == "bands.x":
+            (workdir / "molecular_lab.bands.gnu").write_text(
+                "0 -1\\n0.5 -0.8\\n\\n0 1\\n0.5 1.2\\n",
+                encoding="utf-8",
+            )
+        elif executable == "projwfc.x":
+            save_dir = workdir / "tmp" / "molecular_lab.save"
+            save_dir.mkdir(parents=True, exist_ok=True)
+            (save_dir / "atomic_proj.xml").write_text("<ATOMIC_PROJECTIONS/>", encoding="utf-8")
+            stdout = "projection output"
+            return SimpleNamespace(returncode=0, stdout=stdout, stderr=""), None
+        return SimpleNamespace(returncode=0, stdout="JOB DONE.", stderr=""), None
+
+    monkeypatch.setattr(execution, "_run_qe_input", run)
+    result = execute_qe_bands(
+        crystal(), settings, working_directory=tmp_path,
+        projwfc_executable="projwfc.x",
+    )
+
+    assert result.status is DFTExecutionStatus.FAILED
+    assert "spectra differ at k-point 2" in result.message
+    assert len(validation_calls) == 1
+    assert dataset_calls == []
+    assert result.fat_band_structure is None
