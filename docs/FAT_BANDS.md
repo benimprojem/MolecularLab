@@ -263,4 +263,4 @@ use the recommendation for the selected pseudopotential.
 
 ## Projection-weight diagnostics
 
-`diagnose_fatband_projection_weights()` can report states with effectively zero total projected weight and totals or individual atom/orbital contributions above caller-selected advisory thresholds. Defaults are 1e-12 for the zero threshold and 1.0 for the high thresholds. These are review flags, not universal physical bounds: projector sets may be incomplete or non-orthogonal, and raw values are never normalized or modified by the diagnostic.
+`build_fatband_dataset()` automatically attaches the resulting advisory records to `FatBandDataset.projection_warnings`. Callers can also run `diagnose_fatband_projection_weights()` directly with custom thresholds. It reports states with effectively zero total projected weight and totals or individual atom/orbital contributions above caller-selected advisory thresholds. Defaults are 1e-12 for the zero threshold and 1.0 for the high thresholds. These are review flags, not universal physical bounds: projector sets may be incomplete or non-orthogonal, and raw values are never normalized or modified by the diagnostic.
