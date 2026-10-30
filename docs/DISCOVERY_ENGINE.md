@@ -1,21 +1,21 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 02 -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 03 -->
 
 # Discovery Engine
 
 ## 1. Purpose
 
-Specify the forward and inverse candidate-search workflows. This document also records the first implemented forward-search stage: bounded composition enumeration.
+Specify the forward and inverse candidate-search workflows and record the implemented early stages.
 
 ## 2. Forward discovery
 
 **Input:** a set of allowed elements, plus optional bounds and chemical or structural constraints.
 
-### 2.1 Planned workflow
+### 2.1 Workflow
 
 1. Validate element symbols and user constraints.
 2. Enumerate bounded compositions.
-3. Apply chemically informed plausibility filters.
-4. Generate candidate molecular graphs or crystal prototypes.
+3. Apply explainable composition-level diagnostics.
+4. Propose molecular graphs or crystal prototypes within explicitly stated model coverage.
 5. Enumerate relevant isomers, conformers, or structural variants.
 6. Build initial geometries.
 7. Optimize and validate structures using available backends.
@@ -24,47 +24,60 @@ Specify the forward and inverse candidate-search workflows. This document also r
 
 The engine must not treat all integer element-count combinations as chemically meaningful. Search limits must be visible and configurable. Unusual compositions should not be rejected solely by intuition; they should be assessed using documented rules and suitable methods.
 
-### 2.2 Implemented composition enumeration
+### 2.2 Bounded composition enumeration — implemented
 
-The first stage is implemented in molecular_lab/engines/composition_enumerator.py as the lazy iterator iter_compositions.
+The first stage is implemented in `molecular_lab/engines/composition_enumerator.py` as the lazy iterator `iter_compositions`.
 
-It enumerates element-count combinations within the shared SearchConstraints record:
+It enumerates element-count combinations within the shared `SearchConstraints` record:
 
-- allowed_elements: permitted element symbols.
-- min_total_atoms and max_total_atoms: inclusive total-atom bounds.
-- per_element_max: optional per-element upper bounds. An omitted limit defaults to max_total_atoms.
-- allowed_charges: optional net-charge choices. If omitted, neutral charge is used.
-- domain: molecular, periodic, or mixed interpretation.
+- `allowed_elements`: permitted element symbols.
+- `min_total_atoms` and `max_total_atoms`: inclusive total-atom bounds.
+- `per_element_max`: optional per-element upper bounds.
+- `allowed_charges`: optional net-charge choices. If omitted, neutral charge is used.
+- `domain`: molecular, periodic, or mixed interpretation.
 
-Selected elements are optional by default, so a result may contain any non-empty subset. The caller can pass required_elements to require one or more selected elements in every result. Required symbols must belong to allowed_elements.
+Selected elements are optional by default. The caller can pass `required_elements` to require one or more selected elements in every result. The iterator is deterministic and lazy. Molecular searches emit molecular compositions; periodic searches emit formula units; mixed searches emit both interpretations. These labels do not create structures.
 
-The iterator is deterministic and lazy. Results are emitted by increasing total atom count, then sorted element symbols and ascending counts. This avoids holding the full result set in memory, although large search bounds can still produce a very large number of results. Cancellation, progress reporting, and a user-facing result cap remain future work.
-
-Molecular searches emit CompositionKind.MOLECULAR. Periodic searches emit CompositionKind.FORMULA_UNIT. Mixed searches emit both interpretations for each count vector. These are search-domain labels only; no molecular graph or crystal structure is created.
-
-For an H/O search with total atom counts bounded from 1 through 4, the iterator includes the count vectors for H₂O and H₂O₂. It also emits other mathematically permitted compositions. That is intentional: chemical plausibility is a separate stage and has not yet been implemented.
-
-**Important:** enumeration is not a chemical validation step. A generated composition is not automatically a molecule, crystal, stable compound, experimentally known substance, or synthesizable material.
+Enumeration is not chemical validation. A composition is not automatically a molecule, crystal, stable compound, experimentally known substance, or synthesizable material.
 
 ### 2.3 Initial composition diagnostics — implemented
 
-The first advisory diagnostic module is molecular_lab/chemistry/plausibility.py. It reports:
+`molecular_lab/chemistry/plausibility.py` reports total electron count and parity when charge is known, and checks formal charge balance against a limited curated set of common oxidation states.
 
-- Total electron count and even/odd parity when net charge is specified.
-- Whether a formal oxidation-state assignment can balance the supplied charge using a limited curated list of common states.
-- Whether that check is inconclusive because one or more elements are not covered.
+Electron parity is useful for later spin-state enumeration but is not a stability test. A matching formal oxidation-state assignment is not proof of bonding or existence. Failure to find a match is not a universal impossibility rule and triggers review rather than automatic rejection.
 
-These checks are deliberately conservative. Electron parity is useful later for spin-state enumeration but is not a stability test. A matching oxidation-state assignment is not proof of bonding or existence. Failure to find a match is not a universal impossibility rule and must only trigger review. The current reference table is incomplete and is not a definitive list of allowed oxidation states.
+### 2.4 Molecular graph records — implemented
 
-### 2.4 Further chemical plausibility filters — planned
+The core domain layer now contains:
 
-Potential filters may consider electron count, charge consistency, oxidation-state and valence patterns, bond-order and coordination constraints, known motifs, geometric feasibility, reference databases, and method applicability.
+- `MolecularAtom`: explicit atom ID and element symbol.
+- `MolecularBond`: an undirected bond between two atom IDs with bond order 1–3.
+- `MolecularGraph`: atoms, bonds, proposal method, and explicit limitations.
 
-Filters must be staged and explainable. A cheap filter may lower a candidate's priority, but unusual chemistry must not be permanently rejected unless the rule is justified for the selected domain. A valence-rule match is not proof of stability, and a mismatch is not universally proof of impossibility.
+The graph record validates unique atom IDs, valid bond endpoints, and duplicate bonds. It does not validate chemistry, geometry, or stability by itself.
+
+### 2.5 Restricted molecular graph proposals — prototype implemented
+
+`molecular_lab/engines/molecular_graphs.py` provides `iter_saturated_acyclic_graphs`.
+
+The current prototype is intentionally restricted:
+
+- Neutral compositions only.
+- Supported elements: H, C, N, O, F, and Cl.
+- Fixed common valences: H(1), C(4), N(3), O(2), F(1), Cl(1).
+- Single bonds only.
+- Connected, acyclic heavy-atom skeletons; hydrogen atoms are added explicitly to fill remaining valences.
+- A configurable heavy-atom bound and output candidate cap.
+
+The heavy-atom tree topologies are generated from Prüfer sequences. Equivalent assignments among identical element symbols are deduplicated within the canonicalization search bound. The prototype can propose familiar saturated structures such as H2O, H2O2, CH4, and C2H6O.
+
+This model does **not** cover double/triple bonds, aromatic systems, rings, charged species, radicals, hypervalent chemistry, coordination compounds, or elements outside the listed set. For example, C2H4 requires unsaturation and therefore produces no result here. That means “not generated within this prototype's scope,” not “chemically impossible.”
+
+A proposed graph is only a connectivity hypothesis. It is not a 3D geometry, optimized structure, energy minimum, stability prediction, experimental observation, or synthesis guarantee.
 
 ## 3. Formula-based exploration
 
-When a fixed formula is supplied, the engine should focus on possible structures, connectivity, isomers, conformers, and geometries consistent with that formula and the specified conditions. It must preserve the requested atom counts.
+When a fixed formula is supplied, the engine should preserve its atom counts and explore only structures consistent with those counts. As coverage expands, this will include connectivity, isomers, conformers, and geometries. Current graph proposals cover only the restricted saturated acyclic domain above.
 
 ## 4. Inverse discovery
 
@@ -86,11 +99,14 @@ Candidate records should distinguish experimental validation, database-supported
 
 Implemented:
 - Bounded, deterministic, lazy composition enumeration.
-- Per-element count bounds, required-element selection, charge alternatives, and molecular/periodic/mixed domain labels.
+- Initial electron-count and formal oxidation-state diagnostics.
+- Backend-neutral molecular atom, bond, and graph records.
+- Restricted neutral saturated acyclic graph proposal prototype.
 
 Not implemented:
-- Chemical plausibility scoring or rejection.
-- Molecular graph or crystal structure generation.
-- Geometry optimization, stability assessment, or material-property calculations.
+- General-purpose molecular graph generation beyond the stated prototype scope.
+- Double/triple bond, ring, aromatic, radical, charged, hypervalent, or coordination graph generation.
+- Crystal structure generation.
+- 3D geometry generation/optimization, stability assessment, or material-property calculations.
 
-Tests are authored in tests/test_composition_enumerator.py. Execution verification is pending.
+Tests are authored in `tests/`. Execution verification remains pending.
