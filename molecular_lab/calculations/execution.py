@@ -600,6 +600,61 @@ def _run_qe_input(
     return completed, None
 
 
+
+def _preflight_qe_bands(
+    structure: CrystalStructure,
+    settings: DFTCalculationSettings,
+    *,
+    working_directory: Path,
+    executable: str,
+    bands_executable: str,
+    projwfc_executable: str,
+    wants_fatband: bool,
+) -> DFTExecutionResult | None:
+    """Check every prerequisite before starting the potentially expensive SCF."""
+    problems: list[str] = []
+    try:
+        settings.validate_for_structure(structure)
+    except (TypeError, ValueError) as exc:
+        problems.append(f"Invalid structure/settings: {exc}")
+
+    if not working_directory.is_dir():
+        problems.append(f"Working directory does not exist: {working_directory}")
+
+    required_executables = [
+        ("pw.x", executable),
+        ("bands.x", bands_executable),
+    ]
+    if wants_fatband:
+        required_executables.append(("projwfc.x", projwfc_executable))
+    for stage, requested in required_executables:
+        if _resolve_qe_executable(requested) is None:
+            problems.append(f"{stage} executable was not found: {requested}")
+
+    available, reason = ase_availability()
+    if not available:
+        problems.append(f"ASE is unavailable: {reason}")
+
+    pseudo_dir = working_directory / "pseudo"
+    for element in sorted(structure.composition_by_site):
+        reference = settings.pseudopotentials.get(element)
+        if reference is None:
+            continue
+        pseudo_file = pseudo_dir / reference.file_name
+        if not pseudo_file.is_file():
+            problems.append(
+                f"Missing {element} pseudopotential: {pseudo_file}"
+            )
+
+    if problems:
+        return DFTExecutionResult(
+            "quantum_espresso",
+            DFTExecutionStatus.BACKEND_UNAVAILABLE,
+            "QE BANDS preflight failed; no calculation was started:\n- "
+            + "\n- ".join(problems),
+        )
+    return None
+
 def execute_qe_bands(
     structure: CrystalStructure,
     settings: DFTCalculationSettings,
@@ -622,8 +677,18 @@ def execute_qe_bands(
         )
     wants_fatband = DFTOutput.FAT_BAND_STRUCTURE in settings.requested_outputs
     workdir = Path(working_directory).expanduser().resolve()
-    if not workdir.is_dir():
-        raise ValueError("working_directory must be an existing directory")
+    if timeout_seconds <= 0:
+        raise ValueError("timeout_seconds must be positive")
+    preflight_error = _preflight_qe_bands(
+        structure, settings,
+        working_directory=workdir,
+        executable=executable,
+        bands_executable=bands_executable,
+        projwfc_executable=projwfc_executable,
+        wants_fatband=wants_fatband,
+    )
+    if preflight_error is not None:
+        return preflight_error
     scf_settings = replace(
         settings, task=DFTTask.SCF, band_path=None, band_path_ref="",
         dos=None, requested_outputs=(DFTOutput.TOTAL_ENERGY,),
