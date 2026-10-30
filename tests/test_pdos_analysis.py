@@ -71,3 +71,37 @@ def test_integrates_exact_window_with_interpolated_boundaries():
 def test_integral_rejects_window_outside_sampled_grid():
     with pytest.raises(ValueError, match="within"):
         integrate_pdos_window((0, 1), (1, 1), -0.1, 0.5)
+
+
+
+def test_window_summary_integrates_element_orbital_and_spin_contributions():
+    from molecular_lab.calculations.pdos_analysis import summarize_pdos_window
+
+    data = ProjectedDensityOfStatesData(
+        energies_ev=(-1.0, 0.0, 1.0),
+        records=(
+            _record(1, "Fe", 0, "spin_up", (1, 2, 3), ((1, 2, 3),)),
+            _record(2, "Fe", 0, "spin_up", (2, 3, 4), ((2, 3, 4),)),
+            _record(1, "Fe", 1, "spin_down", (1, 1, 1),
+                    ((0.2, 0.2, 0.2), (0.3, 0.3, 0.3), (0.5, 0.5, 0.5))),
+        ),
+    )
+    result = summarize_pdos_window(data, -0.5, 0.5)
+    fe_s_up = next(x for x in result if x.element == "Fe" and x.angular_momentum == 0)
+    fe_p_down = next(x for x in result if x.element == "Fe" and x.angular_momentum == 1)
+    assert fe_s_up.integrated_local_states == pytest.approx(5.0)
+    assert fe_s_up.integrated_component_states == pytest.approx(5.0)
+    assert fe_p_down.integrated_component_states == pytest.approx(1.0)
+    assert fe_s_up.spin_channel == "spin_up"
+    assert fe_p_down.spin_channel == "spin_down"
+
+
+def test_window_summary_rejects_energy_window_outside_grid():
+    from molecular_lab.calculations.pdos_analysis import summarize_pdos_window
+
+    data = ProjectedDensityOfStatesData(
+        energies_ev=(-1.0, 1.0),
+        records=(_record(1, "Fe", 0, "total", (1, 1), ((1, 1),)),),
+    )
+    with pytest.raises(ValueError, match="within"):
+        summarize_pdos_window(data, -2.0, 0.0)
