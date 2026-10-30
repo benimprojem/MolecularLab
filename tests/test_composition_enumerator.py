@@ -98,3 +98,10 @@ def test_required_all_selected_elements():
 
     assert results
     assert all(set(item.counts) == {"H", "O"} for item in results)
+
+
+
+def test_enumerator_rejects_unknown_element_symbols():
+    constraints = _constraints(allowed_elements=frozenset({"H", "Xx"}))
+    with pytest.raises(ValueError, match="unknown allowed element"):
+        list(iter_compositions(constraints))
