@@ -165,7 +165,7 @@ def test_qe_projected_dos_workflow_runs_projwfc_and_returns_atom_orbitals(tmp_pa
     def run(executable, input_text, *, workdir, **kwargs):
         if executable == "projwfc.x":
             (workdir / "molecular_lab.pdos.pdos_atm#1(Si)_wfc#1(p)").write_text(
-                "-1 1.0 0.2 0.3 0.5\\n0 1.2 0.4 0.5 0.6\\n",
+                "-1 1.0 0.2 0.3 0.5\n0 1.2 0.4 0.5 0.6\n",
                 encoding="utf-8",
             )
         return SimpleNamespace(returncode=0, stdout="JOB DONE.", stderr=""), None
