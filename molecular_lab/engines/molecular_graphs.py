@@ -1,12 +1,12 @@
 """
-Restricted saturated acyclic molecular graph proposal engine.
+Restricted acyclic molecular graph proposal engines.
 
 Version: 0.1
-Rev.: 00
-Status: Prototype; explicit scope and limitations are returned with each graph.
+Rev.: 01
+Status: Saturated and bond-order-aware acyclic prototypes.
 
-This module proposes single-bond, connected, acyclic graphs for a small set of
-neutral main-group elements. It is not a universal molecule generator.
+The generators propose connectivity only. They do not establish geometry,
+energetics, stability, experimental existence, or synthesis feasibility.
 """
 
 from __future__ import annotations
@@ -16,23 +16,14 @@ from math import factorial
 from typing import Iterator
 
 from molecular_lab.chemistry.elements import get_element
-from molecular_lab.core.models import (
-    Composition,
-    MolecularAtom,
-    MolecularBond,
-    MolecularGraph,
-)
+from molecular_lab.core.models import Composition, MolecularAtom, MolecularBond, MolecularGraph
 
-# This is a deliberately narrow, fixed-valence model for the first prototype.
-# It does not cover radicals, hypervalence, aromaticity, multiple bonds,
-# coordination chemistry, charged species, or variable-valence cases.
 _SUPPORTED_VALENCES = {"H": 1, "C": 4, "N": 3, "O": 2, "F": 1, "Cl": 1}
-_METHOD = "bounded_saturated_acyclic_tree_v1"
 _LIMITATIONS = (
     "Neutral species only; charged and radical states are not generated.",
-    "Single bonds only; double bonds, triple bonds, aromaticity, and resonance are outside scope.",
-    "Acyclic connected graphs only; rings and cages are outside scope.",
     "Fixed common valences are used for H, C, N, O, F, and Cl only.",
+    "Acyclic connected heavy-atom skeletons only; rings and cages are outside scope.",
+    "Aromaticity, resonance, hypervalence, coordination chemistry, and variable valence are outside scope.",
     "A graph proposal is not a 3D geometry, stability result, or synthesis prediction.",
 )
 
@@ -57,8 +48,11 @@ def _prufer_trees(node_count: int) -> Iterator[tuple[tuple[int, int], ...]]:
         yield tuple(sorted(edges))
 
 
-def _canonical_signature(elements: tuple[str, ...], edges: tuple[tuple[int, int], ...],
-                          hydrogen_counts: tuple[int, ...]) -> tuple:
+def _canonical_signature(
+    elements: tuple[str, ...],
+    edges: tuple[tuple[int, int, int], ...],
+    hydrogen_counts: tuple[int, ...],
+) -> tuple:
     """Canonicalize a labeled heavy-atom tree under same-element permutations."""
     groups = [tuple(i for i, symbol in enumerate(elements) if symbol == element)
               for element in sorted(set(elements))]
@@ -66,8 +60,6 @@ def _canonical_signature(elements: tuple[str, ...], edges: tuple[tuple[int, int]
     for group in groups:
         permutation_count *= factorial(len(group))
     if permutation_count > 50000:
-        # The caller's candidate cap still bounds work; retain deterministic
-        # representation rather than attempting an expensive canonical search.
         return (elements, edges, hydrogen_counts)
 
     best = None
@@ -79,20 +71,65 @@ def _canonical_signature(elements: tuple[str, ...], edges: tuple[tuple[int, int]
             for local_index, old_index in enumerate(ordered):
                 old_to_new[old_index] = offset + local_index
             offset += len(group)
-        # Rebuild element and attached-H arrays in canonical index order.
         new_elements = [""] * len(elements)
         new_hydrogens = [0] * len(elements)
         for old_index, new_index in old_to_new.items():
             new_elements[new_index] = elements[old_index]
             new_hydrogens[new_index] = hydrogen_counts[old_index]
         new_edges = tuple(sorted(
-            (min(old_to_new[a], old_to_new[b]), max(old_to_new[a], old_to_new[b]))
-            for a, b in edges
+            (min(old_to_new[a], old_to_new[b]),
+             max(old_to_new[a], old_to_new[b]), order)
+            for a, b, order in edges
         ))
         signature = (tuple(new_elements), new_edges, tuple(new_hydrogens))
         if best is None or signature < best:
             best = signature
     return best
+
+
+def _validate_limits(max_candidates: int, max_heavy_atoms: int) -> None:
+    for name, value in (("max_candidates", max_candidates),
+                        ("max_heavy_atoms", max_heavy_atoms)):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"{name} must be a positive integer")
+
+
+def _build_graph(
+    heavy_elements: tuple[str, ...],
+    heavy_edges: tuple[tuple[int, int, int], ...],
+    attached_h: tuple[int, ...],
+    method: str,
+) -> MolecularGraph:
+    atoms = [MolecularAtom(i, element) for i, element in enumerate(heavy_elements)]
+    bonds = [MolecularBond(a, b, order) for a, b, order in heavy_edges]
+    next_id = len(heavy_elements)
+    for heavy_index, hydrogen_count in enumerate(attached_h):
+        for _ in range(hydrogen_count):
+            atoms.append(MolecularAtom(next_id, "H"))
+            bonds.append(MolecularBond(heavy_index, next_id, 1))
+            next_id += 1
+    return MolecularGraph(
+        atoms=tuple(atoms),
+        bonds=tuple(bonds),
+        method=method,
+        limitations=_LIMITATIONS,
+    )
+
+
+def _heavy_elements(composition: Composition, max_heavy_atoms: int) -> tuple[str, ...] | None:
+    if composition.net_charge != 0:
+        return None
+    for symbol in composition.counts:
+        get_element(symbol)
+        if symbol not in _SUPPORTED_VALENCES:
+            return None
+    elements = tuple(
+        symbol for symbol in sorted(composition.counts) if symbol != "H"
+        for _ in range(composition.counts[symbol])
+    )
+    if len(elements) > max_heavy_atoms:
+        return None
+    return elements
 
 
 def iter_saturated_acyclic_graphs(
@@ -101,85 +138,112 @@ def iter_saturated_acyclic_graphs(
     max_candidates: int = 1000,
     max_heavy_atoms: int = 8,
 ) -> Iterator[MolecularGraph]:
-    """
-    Yield bounded neutral saturated acyclic graph proposals for a composition.
-
-    Hydrogen atoms are explicit in the returned graph. The heavy-atom
-    connectivity is a tree; hydrogens fill the remaining fixed valences.
-    """
-    if isinstance(max_candidates, bool) or max_candidates < 1:
-        raise ValueError("max_candidates must be a positive integer")
-    if isinstance(max_heavy_atoms, bool) or max_heavy_atoms < 1:
-        raise ValueError("max_heavy_atoms must be a positive integer")
-    if composition.net_charge != 0:
+    """Yield neutral connected acyclic proposals with single heavy-atom bonds."""
+    _validate_limits(max_candidates, max_heavy_atoms)
+    elements = _heavy_elements(composition, max_heavy_atoms)
+    if elements is None:
         return
-
-    for symbol in composition.counts:
-        get_element(symbol)  # Validate against the periodic-table identity data.
-        if symbol not in _SUPPORTED_VALENCES:
-            return
-
-    heavy_elements = tuple(
-        symbol
-        for symbol in sorted(composition.counts)
-        if symbol != "H"
-        for _ in range(composition.counts[symbol])
-    )
-    if not heavy_elements:
-        # The first prototype recognizes only the simplest diatomic hydrogen.
+    if not elements:
         if composition.counts.get("H") == 2:
             yield MolecularGraph(
                 atoms=(MolecularAtom(0, "H"), MolecularAtom(1, "H")),
                 bonds=(MolecularBond(0, 1),),
-                method=_METHOD,
+                method="bounded_saturated_acyclic_tree_v1",
                 limitations=_LIMITATIONS,
             )
         return
 
-    heavy_count = len(heavy_elements)
-    if heavy_count > max_heavy_atoms:
-        return
-
-    hydrogen_target = composition.counts.get("H", 0)
+    target_h = composition.counts.get("H", 0)
     emitted = 0
     seen: set[tuple] = set()
-
-    for heavy_edges in _prufer_trees(heavy_count) if heavy_count > 1 else ((),):
-        degrees = [0] * heavy_count
-        for a, b in heavy_edges:
+    topologies = _prufer_trees(len(elements)) if len(elements) > 1 else ((),)
+    for topology in topologies:
+        degrees = [0] * len(elements)
+        for a, b in topology:
             degrees[a] += 1
             degrees[b] += 1
-        if any(degrees[i] > _SUPPORTED_VALENCES[element]
-               for i, element in enumerate(heavy_elements)):
+        if any(degrees[i] > _SUPPORTED_VALENCES[e] for i, e in enumerate(elements)):
             continue
-
-        attached_h = tuple(
-            _SUPPORTED_VALENCES[element] - degrees[i]
-            for i, element in enumerate(heavy_elements)
+        attached_h = tuple(_SUPPORTED_VALENCES[e] - degrees[i]
+                           for i, e in enumerate(elements))
+        if sum(attached_h) != target_h:
+            continue
+        signature = _canonical_signature(
+            elements, tuple((a, b, 1) for a, b in topology), attached_h
         )
-        if sum(attached_h) != hydrogen_target:
-            continue
-
-        signature = _canonical_signature(heavy_elements, heavy_edges, attached_h)
         if signature in seen:
             continue
         seen.add(signature)
-
-        atoms = [MolecularAtom(i, element) for i, element in enumerate(heavy_elements)]
-        bonds = [MolecularBond(a, b, 1) for a, b in heavy_edges]
-        next_id = heavy_count
-        for heavy_index, hydrogen_count in enumerate(attached_h):
-            for _ in range(hydrogen_count):
-                atoms.append(MolecularAtom(next_id, "H"))
-                bonds.append(MolecularBond(heavy_index, next_id, 1))
-                next_id += 1
-
-        yield MolecularGraph(
-            atoms=tuple(atoms),
-            bonds=tuple(bonds),
-            method=_METHOD,
-            limitations=_LIMITATIONS,
+        yield _build_graph(
+            elements, tuple((a, b, 1) for a, b in topology),
+            attached_h, "bounded_saturated_acyclic_tree_v1"
         )
         emitted += 1
         if emitted >= max_candidates:
             return
+
+
+def iter_acyclic_graphs(
+    composition: Composition,
+    *,
+    max_candidates: int = 1000,
+    max_heavy_atoms: int = 8,
+    max_assignments: int = 100000,
+) -> Iterator[MolecularGraph]:
+    """
+    Yield neutral acyclic connectivity proposals with single, double, or triple
+    heavy-atom bonds. Each heavy-atom skeleton is a tree; explicit hydrogens
+    fill unused valence. max_assignments bounds bond-order combinations examined.
+    """
+    _validate_limits(max_candidates, max_heavy_atoms)
+    if isinstance(max_assignments, bool) or not isinstance(max_assignments, int) or max_assignments < 1:
+        raise ValueError("max_assignments must be a positive integer")
+    elements = _heavy_elements(composition, max_heavy_atoms)
+    if elements is None:
+        return
+    if not elements:
+        if composition.counts.get("H") == 2:
+            yield MolecularGraph(
+                atoms=(MolecularAtom(0, "H"), MolecularAtom(1, "H")),
+                bonds=(MolecularBond(0, 1),),
+                method="bounded_acyclic_bond_order_tree_v1",
+                limitations=_LIMITATIONS,
+            )
+        return
+
+    target_h = composition.counts.get("H", 0)
+    emitted = 0
+    examined = 0
+    seen: set[tuple] = set()
+    topologies = _prufer_trees(len(elements)) if len(elements) > 1 else ((),)
+    for topology in topologies:
+        order_options = product((1, 2, 3), repeat=len(topology))
+        for orders in order_options:
+            examined += 1
+            if examined > max_assignments:
+                return
+            used = [0] * len(elements)
+            weighted_edges = tuple(
+                (a, b, order) for (a, b), order in zip(topology, orders)
+            )
+            for a, b, order in weighted_edges:
+                used[a] += order
+                used[b] += order
+            if any(used[i] > _SUPPORTED_VALENCES[element]
+                   for i, element in enumerate(elements)):
+                continue
+            attached_h = tuple(_SUPPORTED_VALENCES[element] - used[i]
+                               for i, element in enumerate(elements))
+            if sum(attached_h) != target_h:
+                continue
+            signature = _canonical_signature(elements, weighted_edges, attached_h)
+            if signature in seen:
+                continue
+            seen.add(signature)
+            yield _build_graph(
+                elements, weighted_edges, attached_h,
+                "bounded_acyclic_bond_order_tree_v1"
+            )
+            emitted += 1
+            if emitted >= max_candidates:
+                return
