@@ -30,13 +30,15 @@ Define the boundaries and responsibilities of Molecular Lab modules. This docume
 
 The shared domain contract is specified in [DATA_MODEL.md](DATA_MODEL.md). Domain records remain independent of scientific backends. Adapters convert between Molecular Lab structures/settings and solver-specific inputs while preserving atom identity, units, conditions, and provenance.
 
-The common solver orchestration contract is implemented in `molecular_lab/engines/calculation_protocol.py`:
+The common solver orchestration contract is implemented in `molecular_lab/engines/calculation_protocol.py`. Backend-neutral periodic DFT inputs are modeled in `molecular_lab/calculations/dft_settings.py`, independently of any particular solver:
 
 - `CalculationRequest` carries a request ID, physics domain, named method, scalar parameters, operating conditions, requested outputs, and optional structure reference.
 - `SolverCapability` declares a solver's supported domains, methods, and optional dependencies.
 - `SolverAvailability` distinguishes a declared adapter from an installed/usable backend.
 - `SolverRegistry` registers adapters, lists availability, matches requests, and dispatches only to a compatible available adapter.
 - `CalculationResult` normalizes success/failure/unsupported/unavailable states and carries scalar outputs, frequency-dependent response datasets, spin-resolved band structures, and total/projected DOS records.
+- `DFTCalculationSettings` records the task, exchange-correlation identifier, plane-wave cutoff with units, k-point mesh, spin/SOC flags, optional smearing, convergence criteria, pseudopotential references, conditions, and requested outputs.
+- Structure-aware DFT validation checks non-periodic k-point directions and exact element coverage by pseudopotential references. It does not check whether files exist or whether a solver supports the selected settings.
 
 The four initial domains are electronic structure, electrical transport, magnetic response, and electromagnetic response. This separation prevents accidental use of a solver outside its physical scope. A solver declaration is not evidence that the executable is installed, and an unavailable backend must never produce a fabricated result.
 
@@ -74,6 +76,6 @@ The UI framework, persistence technology, job scheduler, internal unit conventio
 
 ## Implementation status
 
-Implemented: initial offline reference-molecule catalogue and lookup functions; optional RDKit graph-identification adapter; bounded forward-discovery pipeline; material design/target and frequency-dependent response records; criterion-bound electrical behavior screening; electronic-structure band/DOS result records with band-edge screening; periodic crystal/site/defect records; and the common solver request/capability/availability/dispatch protocol with unit tests.
+Implemented: backend-neutral DFT calculation input settings and validation; initial offline reference-molecule catalogue and lookup functions; optional RDKit graph-identification adapter; bounded forward-discovery pipeline; material design/target and frequency-dependent response records; criterion-bound electrical behavior screening; electronic-structure band/DOS result records with band-edge screening; periodic crystal/site/defect records; and the common solver request/capability/availability/dispatch protocol with unit tests.
 
 Not implemented: production adapters for electronic-structure, transport, magnetic, or full-wave electromagnetic solvers; geometry optimization; broad crystal structure generation; stability assessment; job queue/cancellation; and actual material-property calculations.
