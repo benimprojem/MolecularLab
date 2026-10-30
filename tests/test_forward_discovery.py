@@ -150,3 +150,29 @@ def test_periodic_only_domain_is_rejected_explicitly():
     )
     with pytest.raises(ValueError, match="Periodic-only"):
         run_forward_discovery(constraints)
+
+
+def test_forward_pipeline_includes_unicyclic_ring_proposals(monkeypatch):
+    from molecular_lab.engines import structure_identification
+
+    monkeypatch.setattr(structure_identification, "_load_rdkit", lambda: None)
+    constraints = SearchConstraints(
+        allowed_elements=frozenset({"C", "H"}),
+        min_total_atoms=9,
+        max_total_atoms=9,
+        domain=SearchDomain.MOLECULE,
+        per_element_max={"C": 3, "H": 6},
+    )
+    results = run_forward_discovery(
+        constraints,
+        required_elements={"C", "H"},
+        max_compositions=10,
+    )
+    cyclopropane_formula = next(
+        result for result in results
+        if dict(result.composition.counts) == {"C": 3, "H": 6}
+    )
+    assert any(
+        graph.method == "bounded_unicyclic_bond_order_graph_v1"
+        for graph in cyclopropane_formula.graphs
+    )
