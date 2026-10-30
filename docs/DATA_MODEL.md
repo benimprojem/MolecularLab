@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 00 | Status: Initial data contract -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 01 | Status: Initial data contract -->
 
 # Domain Data Model
 
