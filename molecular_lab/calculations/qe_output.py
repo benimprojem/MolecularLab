@@ -133,6 +133,12 @@ _QE_PDOS_FILE_RE = re.compile(
 
 
 def _qe_orbital_component_labels(angular_momentum: int) -> tuple[str, ...]:
+    if angular_momentum == 0:
+        return ("s",)
+    if angular_momentum == 1:
+        return ("p_z", "p_x", "p_y")
+    if angular_momentum == 2:
+        return ("d_z2", "d_zx", "d_zy", "d_x2-y2", "d_xy")
     labels = ["m=0"]
     for magnetic_number in range(1, angular_momentum + 1):
         labels.extend((f"m={magnetic_number}, cos(phi)", f"m={magnetic_number}, sin(phi)"))
