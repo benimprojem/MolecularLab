@@ -6,10 +6,32 @@ from molecular_lab.calculations.dft_settings import (
     DFTCalculationSettings, DFTOutput, DFTTask, EnergyCutoff, EnergyUnit,
     KPointMesh, KPointScheme, PseudopotentialReference,
 )
+from molecular_lab.calculations import quantum_espresso as qe_module
 from molecular_lab.calculations.execution import (
     DFTExecutionStatus, execute_quantum_espresso_scf,
 )
 from molecular_lab.structures.crystal import CrystalSite, CrystalStructure
+
+
+@pytest.fixture(autouse=True)
+def fake_ase_atoms(monkeypatch):
+    class Cell:
+        array = ((5.6, 0.0, 0.0), (0.0, 5.6, 0.0), (0.0, 0.0, 5.6))
+
+    class Atoms:
+        cell = Cell()
+
+        def get_chemical_symbols(self):
+            return ["Na", "Cl"]
+
+        def get_masses(self):
+            return [22.989769, 35.45]
+
+        def get_scaled_positions(self, wrap=False):
+            assert wrap is False
+            return ((0.0, 0.0, 0.0), (0.5, 0.5, 0.5))
+
+    monkeypatch.setattr(qe_module, "to_ase_atoms", lambda structure: Atoms())
 
 
 def make_structure():
