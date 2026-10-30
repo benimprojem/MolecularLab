@@ -89,3 +89,8 @@ Metamaterials are modeled as periodic geometries linked to constituent materials
 ## 8. License
 
 This project is distributed under the MIT License. See [LICENSE](LICENSE).
+
+
+### DFT execution update (Rev. 23)
+
+The common DFT execution layer now includes SCF, fixed-cell RELAX and variable-cell VC_RELAX for Quantum ESPRESSO and GPAW. Structural results preserve the original input structure and return optimized structures separately. Requested stress tensors are normalized to GPa with a documented tension-positive sign convention. VC_RELAX requires explicit atomic-force and stress tolerances; GPAW's final stress residual is independently checked after ASE cell-filter optimization. This is an execution prototype, not evidence that a real backend calculation has been run or scientifically converged for any particular material.
