@@ -47,6 +47,7 @@ class DFTOutput(str, Enum):
     BAND_STRUCTURE = "band_structure"
     DENSITY_OF_STATES = "density_of_states"
     PROJECTED_DOS = "projected_dos"
+    FAT_BAND_STRUCTURE = "fat_band_structure"
     CHARGE_DENSITY = "charge_density"
     MAGNETIC_MOMENTS = "magnetic_moments"
 
