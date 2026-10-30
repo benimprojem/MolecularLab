@@ -40,7 +40,7 @@ The repository is a research/prototype codebase. A feature being implemented or 
 | QE atom/orbital PDOS | Implemented prototype | SCF → NSCF → projwfc.x; collinear scalar-relativistic support |
 | Band-edge / PDOS correlation | Implemented analysis helper | Energy-window summaries; not k-resolved band character |
 | QE k-resolved projection parser, fat-band data model and QE execution | Implemented prototype | Opt-in `DFTOutput.FAT_BAND_STRUCTURE`; synthetic workflow tests pass; real QE run still pending |
-| Fat-band plot-data preparation | Implemented prototype | Grouped series, reciprocal path distance, symmetry ticks, filters and display-only normalization; no renderer yet |
+| Fat-band plot-data preparation | Implemented prototype | Grouped series, reciprocal path distance, symmetry ticks, filters and display-only normalization |
 | GPAW BANDS / DOS | Not implemented | Explicitly reported as unavailable |
 | Spin-polarized QE BANDS | Not implemented | Current BANDS runner rejects it |
 | Molecular electronic structure and spectra | Not implemented | Future work |
@@ -113,7 +113,8 @@ The conventional `band_structure` remains based on `bands.x`. Fat-band energies 
 - [x] Complete QE fat-band execution integration with synthetic/mocked workflow tests.
 - [ ] Verify parser and workflow against a real QE version and a small reference crystal.
 - [x] Add plot-ready fat-band data export, grouping, filters and display-only normalization.
-- [ ] Add the actual fat-band renderer and user-facing visualization component.
+- [x] Add a dependency-free static SVG renderer for fat-band plots.
+- [ ] Add an interactive desktop visualization component after selecting the UI framework.
 - [ ] Add atom, element and orbital filters to the visualization.
 - [ ] Add explicit display-only normalization options without modifying raw weights.
 - [ ] Revisit band-crossing continuity and state tracking with reference cases.
@@ -142,7 +143,7 @@ Latest completed GitHub Actions run for the parser, execution integration, coord
 - Verified code commit: `bb38b9fde288bbbbebcc28ad5bdefaf76d594b88`.
 - Run: https://github.com/benimprojem/MolecularLab/actions/runs/41091007057
 
-The current test matrix is green. This validates synthetic/mocked workflows only, not a real QE solver execution.
+The QE fat-band parser/execution and plot-data tests are green. The SVG renderer test run passed on commit `1e3c97ff68f80f0276757816300b16a2fa021f24` (280 passed, 1 skipped with RDKit). This validates synthetic/mocked data only, not a real QE solver execution.
 
 Validation levels must be recorded separately:
 
@@ -170,4 +171,4 @@ At the beginning of each new Molecular Lab conversation:
    - exact next step.
 7. Update the README only when the user-facing project capability/status materially changes.
 
-**Active hand-off point:** Validate the new plot-data transformation with CI, then design the actual fat-band renderer/UI. Continue from `DFTExecutionResult.fat_band_structure` and `prepare_fatband_plot_data`; inspect existing visualization conventions before adding a new plot interface. Do not restart the parser, execution pipeline, chemical graph, crystal foundation or PDOS implementation from scratch.
+**Active hand-off point:** Design the interactive fat-band UI and validate the complete flow against a real QE reference calculation. The plot-data layer and static SVG renderer are implemented and synthetic tests pass. Continue from `DFTExecutionResult.fat_band_structure`, `prepare_fatband_plot_data` and `render_fatband_svg`. Do not restart the parser, execution pipeline, chemical graph, crystal foundation or PDOS implementation from scratch.
