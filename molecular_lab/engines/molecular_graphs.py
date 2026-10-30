@@ -510,3 +510,124 @@ def iter_linear_fused_acene_graphs(
         emitted += 1
         if emitted >= max_candidates:
             return
+
+
+
+def _fused_hexagon_topology(
+    cells: tuple[tuple[int, int], ...],
+) -> tuple[tuple[tuple[int, int], ...], int]:
+    """Return a deduplicated carbon-edge set and vertex count for hex-cell layout."""
+    corner_offsets = (
+        (0, -2), (1, -1), (1, 1),
+        (0, 2), (-1, 1), (-1, -1),
+    )
+    edges: set[tuple[tuple[int, int], tuple[int, int]]] = set()
+    vertices: set[tuple[int, int]] = set()
+
+    for q, r in cells:
+        center = (2 * q + r, 3 * r)
+        corners = tuple(
+            (center[0] + dx, center[1] + dy)
+            for dx, dy in corner_offsets
+        )
+        vertices.update(corners)
+        for index in range(6):
+            a = corners[index]
+            b = corners[(index + 1) % 6]
+            edges.add((min(a, b), max(a, b)))
+
+    ordered_vertices = tuple(sorted(vertices))
+    vertex_ids = {point: index for index, point in enumerate(ordered_vertices)}
+    indexed_edges = tuple(sorted(
+        (min(vertex_ids[a], vertex_ids[b]), max(vertex_ids[a], vertex_ids[b]))
+        for a, b in edges
+    ))
+    return indexed_edges, len(ordered_vertices)
+
+
+def iter_fused_benzenoid_graphs(
+    composition: Composition,
+    *,
+    max_candidates: int = 100,
+    max_heavy_atoms: int = 16,
+    max_assignments: int = 100000,
+) -> Iterator[MolecularGraph]:
+    """
+    Yield Kekule graph proposals for a small registered set of fused benzenoid
+    ring layouts: naphthalene (2 rings), linear anthracene and angular
+    phenanthrene (3 rings), plus longer linear acenes within the atom bound.
+
+    The topology is a union of edge-sharing six-membered carbon rings. This is
+    not a general fused-ring, heteroaromatic, or arbitrary polycyclic generator.
+    """
+    _validate_limits(max_candidates, max_heavy_atoms)
+    if isinstance(max_assignments, bool) or not isinstance(max_assignments, int) or max_assignments < 1:
+        raise ValueError("max_assignments must be a positive integer")
+    if composition.net_charge != 0 or set(composition.counts) - {"C", "H"}:
+        return
+
+    carbon_count = composition.counts.get("C", 0)
+    hydrogen_count = composition.counts.get("H", 0)
+    if carbon_count < 10 or (carbon_count - 2) % 4:
+        return
+    ring_count = (carbon_count - 2) // 4
+    if ring_count < 2 or carbon_count > max_heavy_atoms:
+        return
+    if hydrogen_count != 2 * ring_count + 4:
+        return
+
+    layouts: list[tuple[str, tuple[tuple[int, int], ...]]] = []
+    if ring_count == 2:
+        layouts.append(("naphthalene", ((0, 0), (1, 0))))
+    elif ring_count == 3:
+        layouts.extend((
+            ("anthracene", ((0, 0), (1, 0), (2, 0))),
+            ("phenanthrene", ((0, 0), (1, 0), (1, 1))),
+        ))
+    else:
+        layouts.append((
+            "linear_acene",
+            tuple((index, 0) for index in range(ring_count)),
+        ))
+
+    emitted = 0
+    examined_total = 0
+    seen_topologies: set[tuple[tuple[int, int], ...]] = set()
+    for layout_name, cells in layouts:
+        edges, node_count = _fused_hexagon_topology(cells)
+        if node_count != carbon_count or len(edges) - node_count + 1 != ring_count:
+            continue
+        if edges in seen_topologies:
+            continue
+        seen_topologies.add(edges)
+
+        degree = [0] * node_count
+        for a, b in edges:
+            degree[a] += 1
+            degree[b] += 1
+        if any(value not in (2, 3) for value in degree):
+            continue
+        attached_h = tuple(3 - value for value in degree)
+        if sum(attached_h) != hydrogen_count:
+            continue
+
+        remaining_budget = max_assignments - examined_total
+        if remaining_budget <= 0:
+            return
+        matching_iter = _perfect_matchings(
+            node_count, edges, max_assignments=remaining_budget
+        )
+        for matching in matching_iter:
+            matched = set(matching)
+            weighted_edges = tuple(
+                (a, b, 2 if (a, b) in matched else 1) for a, b in edges
+            )
+            yield _build_graph(
+                tuple("C" for _ in range(node_count)),
+                weighted_edges,
+                attached_h,
+                f"bounded_fused_benzenoid_{layout_name}_kekule_v1",
+            )
+            emitted += 1
+            if emitted >= max_candidates:
+                return
