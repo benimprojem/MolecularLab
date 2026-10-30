@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 02 | Status: Initial data contract -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 03 | Status: Initial data contract -->
 
 # Domain Data Model
 
@@ -178,7 +178,27 @@ Optional:
 - output artifact references,
 - warnings and failure reason.
 
-### 3.10 PropertyValue
+### 3.10 DFTCalculationSettings
+
+The initial backend-neutral periodic DFT settings model is implemented in `molecular_lab/calculations/dft_settings.py`.
+
+It records:
+- calculation task (SCF, relaxation, variable-cell relaxation, bands, or DOS),
+- exchange-correlation functional identifier,
+- plane-wave energy cutoff with explicit eV/Ry/Ha unit,
+- regular k-point mesh scheme, grid, and shift,
+- spin-polarization and spin-orbit-coupling flags,
+- optional smearing scheme and width,
+- SCF energy, force, and density convergence criteria,
+- element-keyed pseudopotential references and provenance fields,
+- requested output types and optional temperature/pressure conditions,
+- a separate explicit band-path reference for band tasks.
+
+Structure-aware validation checks k-point counts along non-periodic axes and ensures that pseudopotential references cover exactly the structure's elements. It does not verify pseudopotential files, backend compatibility, or scientific convergence. No universal cutoff or k-point recommendation is embedded in the model.
+
+See [DFT_SETTINGS.md](DFT_SETTINGS.md) for units, validation rules, and scientific limitations.
+
+### 3.11 PropertyValue
 
 Required:
 - property identifier,
