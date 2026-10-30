@@ -9,7 +9,7 @@ Status: Initial project foundation
 
 **Molecular Lab** is a planned Windows desktop environment for exploring molecules, compounds, crystals, and functional materials through computational chemistry and materials-science workflows.
 
-> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, a bounded composition enumerator, advisory composition diagnostics, a restricted molecular graph prototype, and a small offline reference-molecule catalogue. General structure generation, geometry optimization, stability assessment, and material-property calculations are not implemented yet.
+> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, a bounded composition enumerator, advisory composition diagnostics, a restricted molecular graph prototype, a small offline reference-molecule catalogue, and an optional RDKit adapter that identifies generated graphs against that catalogue. General structure generation, geometry optimization, stability assessment, and material-property calculations are not implemented yet.
 
 ## 1. Project goal
 
@@ -90,7 +90,7 @@ Potential integrations include:
 | Quantum ESPRESSO | Periodic electronic-structure calculations | Requires suitable pseudopotentials and careful convergence |
 | GPAW / CP2K | Additional electronic-structure workflows | Capabilities, accuracy, and computational cost vary by setup |
 
-These are candidate integrations, not claims that they are already installed or operational. Other backends may be added as the project develops.
+These are candidate integrations, not claims that they are already installed or operational. RDKit is currently an optional, lazily loaded dependency for graph identification; install it with `pip install rdkit` in the project environment when this feature is needed. Its availability and InChI support should be checked in the target environment. Other backends may be added as the project develops.
 
 ## 6. Result quality and evidence
 
