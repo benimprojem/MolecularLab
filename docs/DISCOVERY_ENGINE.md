@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 04 -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 05 -->
 
 # Discovery Engine
 
@@ -127,10 +127,12 @@ Implemented:
 - Offline reference-molecule seed catalogue with formula/name lookup and InChIKey identity matching.
 - Initial electron-count and formal oxidation-state diagnostics.
 - Backend-neutral molecular atom, bond, and graph records.
-- Restricted neutral saturated acyclic graph proposal prototype.\n- Graph-to-catalogue identification adapter with optional RDKit canonical SMILES/InChIKey generation and formula-only fallback.
+- Restricted neutral saturated acyclic graph proposal prototype.
+- Graph-to-catalogue identification adapter with optional RDKit canonical SMILES/InChIKey generation and formula-only fallback.
 
 Not implemented:
-- General-purpose molecular graph generation beyond the stated prototype scope.\n- RDKit installation/configuration in a packaged application environment; the adapter is optional and lazy-loaded.
+- General-purpose molecular graph generation beyond the stated prototype scope.
+- RDKit installation/configuration in a packaged application environment; the adapter is optional and lazy-loaded.
 - Double/triple bond, ring, aromatic, radical, charged, hypervalent, or coordination graph generation.
 - Crystal structure generation.
 - 3D geometry generation/optimization, stability assessment, or material-property calculations.
