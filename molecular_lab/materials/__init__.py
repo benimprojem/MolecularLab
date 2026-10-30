@@ -21,6 +21,8 @@ from molecular_lab.materials.response import (
 )
 
 __all__ = [
+    "BandChannelData", "BandGapAssessment", "BandGapStatus", "BandStructureData",
+    "DensityOfStatesChannel", "DensityOfStatesData", "KPoint", "assess_band_gap",
     "ComplexValue", "ConvergenceInfo", "ConvergenceStatus", "ElectricalBehavior",
     "ElectricalBehaviorAssessment", "ElectricalClassificationCriteria", "ElectricalMetric",
     "MaterialResponseDataset", "MetamaterialDesign", "MetamaterialMechanism",
