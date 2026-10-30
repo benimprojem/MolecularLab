@@ -54,3 +54,10 @@ The total-DOS parser reads the energy and DOS columns in eV and states/eV. Spin-
 The QE PDOS adapter uses `projwfc.x` output files. Each record preserves the one-based atom index, element, pseudopotential wavefunction index, angular momentum (l), spin channel, local DOS and the (2l+1) angular components. Collinear spin-polarized output keeps spin-up and spin-down separate. QE's p and d component ordering is retained as documented; f components are kept as generic angular labels.
 
 The decomposition depends on the pseudopotential atomic wavefunctions and projection procedure. It is not a unique observable assignment of electronic charge to atoms or orbitals. j-resolved relativistic and k-resolved output are not yet supported. See [QE projwfc.x documentation](https://www.quantum-espresso.org/Doc/INPUT_PROJWFC.html).\n\nThe analysis helpers in `molecular_lab.calculations.pdos_analysis` sum projected components by element or atom while retaining angular momentum and spin channels. They also integrate a supplied PDOS curve over an energy window using trapezoidal integration with interpolated boundaries. These are numerical summaries of the supplied projections, not independent physical observables. See [PDOS Aggregation and Energy-Window Analysis](PDOS_ANALYSIS.md).
+
+
+## Band-edge / PDOS correlation
+
+The `analyze_band_edge_pdos` helper connects a sampled band-gap assessment to element/atom and orbital PDOS integrals in configurable windows below the VBM and above the CBM. It preserves spin and orbital channels. The PDOS energy-axis shift is explicit, and both windows must be covered by the PDOS grid.
+
+This is energy-resolved correlation, not k-resolved band character. It cannot tell which orbital forms a particular band at a particular k-point; that requires k-resolved band-projection output. Compatibility of structures, pseudopotentials, functionals and energy references remains the caller's responsibility.
