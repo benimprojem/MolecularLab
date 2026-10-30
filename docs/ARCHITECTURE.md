@@ -1,10 +1,10 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 06 | Status: Initial architecture refinement -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 07 | Status: Initial architecture refinement -->
 
 # System Architecture
 
 ## Purpose
 
-Define the planned boundaries and responsibilities of Molecular Lab modules. This document is an architectural outline; it does not describe implemented scientific behavior.
+Define the boundaries and responsibilities of Molecular Lab modules. This document distinguishes implemented software contracts from scientific calculations that still require external backends.
 
 ## High-level layers
 
@@ -21,16 +21,32 @@ Define the planned boundaries and responsibilities of Molecular Lab modules. Thi
 - `molecular_lab/structures/`: molecular graphs, conformers, 3D coordinates, and crystal structures.
 - `molecular_lab/calculations/`: calculation interfaces and backend adapters.
 - `molecular_lab/materials/`: phases, defects, optical, electrical, mechanical, and thermal properties.
-- `molecular_lab/engines/`: forward and inverse discovery workflows.
-- `molecular_lab/database/`: local persistence, reference-molecule catalogue, external database adapters, and provenance-preserving imports.
+- `molecular_lab/engines/`: forward/inverse discovery workflows and solver orchestration.
+- `molecular_lab/database/`: local persistence, reference-molecule catalogue, external database adapters, and provenance.
 - `ui/`: desktop application.
 - `tests/`: unit, integration, and scientific validation tests.
 
-## Domain data contract
+## Domain and calculation contracts
 
-The shared domain contract is specified in [DATA_MODEL.md](DATA_MODEL.md). It defines the initial records and relationships for elements, isotopes, compositions, search constraints, molecular graphs, geometries, crystal structures, candidates, calculations, properties, and evidence.
+The shared domain contract is specified in [DATA_MODEL.md](DATA_MODEL.md). Domain records remain independent of scientific backends. Adapters convert between Molecular Lab structures/settings and solver-specific inputs while preserving atom identity, units, conditions, and provenance.
 
-Domain records should remain independent of specific scientific backends. Adapters are responsible for conversion and must preserve atom identity, units, conditions, and provenance.
+The common solver orchestration contract is implemented in `molecular_lab/engines/calculation_protocol.py`:
+
+- `CalculationRequest` carries a request ID, physics domain, named method, scalar parameters, operating conditions, requested outputs, and optional structure reference.
+- `SolverCapability` declares a solver's supported domains, methods, and optional dependencies.
+- `SolverAvailability` distinguishes a declared adapter from an installed/usable backend.
+- `SolverRegistry` registers adapters, lists availability, matches requests, and dispatches only to a compatible available adapter.
+- `CalculationResult` normalizes success/failure/unsupported/unavailable states and carries scalar outputs or frequency-dependent response datasets.
+
+The four initial domains are electronic structure, electrical transport, magnetic response, and electromagnetic response. This separation prevents accidental use of a solver outside its physical scope. A solver declaration is not evidence that the executable is installed, and an unavailable backend must never produce a fabricated result.
+
+## Adapter boundary and execution rules
+
+Each optional adapter implements a capability declaration, an availability check, and a run method. Adapter-specific packages are imported only by their adapter modules; the common protocol uses the Python standard library and does not require optional scientific software.
+
+A backend exception is converted to an explicit failed calculation result at the adapter boundary. A result with a mismatched request ID or solver identity is rejected. Scientific outputs must include units, conditions, method/backend provenance, evidence category, limitations, and convergence information where relevant.
+
+The current protocol is synchronous and intentionally small. A persistent job queue, cancellation, progress reporting, resource scheduling, retry policy, and distributed execution remain application-layer work and must not be simulated by this registry.
 
 ## Design requirements
 
@@ -46,8 +62,10 @@ Domain records should remain independent of specific scientific backends. Adapte
 
 ## Open decisions
 
-The UI framework, persistence technology, job scheduler, exact backend interfaces, internal unit convention, and validation library will be selected during implementation and documented here when decided.
+The UI framework, persistence technology, job scheduler, internal unit convention, and scientific validation policy will be selected during implementation and documented here when decided.
 
 ## Implementation status
 
-The initial offline reference-molecule catalogue and lookup functions are implemented under `molecular_lab/database/`. A graph-identification adapter under `molecular_lab/engines/` uses optional RDKit to derive canonical SMILES and InChIKeys before checking exact catalogue identity; without RDKit it performs formula-only matching. The `forward_discovery` module connects bounded composition enumeration, advisory diagnostics, catalogue lookup, restricted graph proposals, and graph identification in one workflow. General persistence, external database synchronization, geometry optimization, and scientific calculation backend integration remain unimplemented.
+Implemented: initial offline reference-molecule catalogue and lookup functions; optional RDKit graph-identification adapter; bounded forward-discovery pipeline; material design/target and frequency-dependent response records; criterion-bound electrical behavior screening; and the common solver request/capability/availability/dispatch protocol with unit tests.
+
+Not implemented: production adapters for electronic-structure, transport, magnetic, or full-wave electromagnetic solvers; geometry optimization; broad crystal structure generation; stability assessment; job queue/cancellation; and actual material-property calculations.
