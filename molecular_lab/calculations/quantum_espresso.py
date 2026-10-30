@@ -300,9 +300,9 @@ def prepare_qe_bands_postprocess_input(
     if settings.task is not DFTTask.BANDS or settings.band_path is None:
         raise QuantumEspressoInputError("bands.x preparation requires a BANDS task with BandPath")
     prefix = _token(prefix, "prefix")
-    if not output_file or any(c in output_file for c in ("\\n", "\\r", "'", "!")):
+    if not output_file or any(c in output_file for c in ("\n", "\r", "'", "!")):
         raise QuantumEspressoInputError("output_file must be a safe non-empty filename")
-    text = "\\n".join([
+    text = "\n".join([
         "&BANDS",
         f"  prefix = '{prefix}'",
         f"  outdir = {_quoted_path(outdir, 'outdir')}",
@@ -336,7 +336,7 @@ def prepare_qe_dos_postprocess_input(
     if settings.task is not DFTTask.DOS or settings.dos is None:
         raise QuantumEspressoInputError("DOS post-processing requires a DOS task with DOSSettings")
     prefix = _token(prefix, "prefix")
-    if any(c in output_file for c in ("\\n", "\\r", "'", "!")) or not output_file:
+    if any(c in output_file for c in ("\n", "\r", "'", "!")) or not output_file:
         raise QuantumEspressoInputError("output_file must be a safe non-empty filename")
     dos = settings.dos
     delta_ev = (dos.energy_max_ev - dos.energy_min_ev) / (dos.points - 1)
