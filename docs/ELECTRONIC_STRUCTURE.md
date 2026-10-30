@@ -37,4 +37,4 @@ The normalization must state whether DOS is per cell, atom, formula unit, or ano
 
 Implemented: standard-library records, validation, and tests for k-points, spin-resolved bands, occupation arrays, direct/indirect gap screening, and total/projected DOS grids.
 
-Not implemented: Quantum ESPRESSO/GPAW adapters, structure-to-input conversion, band interpolation, projected-DOS parser adapters, effective masses, Fermi-surface analysis, optical transitions, or actual DFT execution.
+Partially implemented: Quantum ESPRESSO input preparation for a structured BANDS path and total-DOS NSCF/dos.x workflow. Not implemented: BANDS/DOS process orchestration and output parsers for QE/GPAW, construction of normalized result records from solver output, band interpolation, projected-DOS adapters, effective masses, Fermi-surface analysis, optical transitions, or actual DFT execution.
