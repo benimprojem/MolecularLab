@@ -64,3 +64,16 @@ For BANDS, supply a structured `BandPath` with fractional reciprocal coordinates
 For total DOS, supply `DOSSettings` with an explicit energy window, grid size, and broadening in eV. The QE `pw.x` input is prepared as an NSCF stage using the configured uniform k-point mesh. A separate `dos.x` input is generated with energy bounds and grid spacing in eV; broadening is converted to Ry as required by QE. The caller must first complete the prerequisite SCF calculation and then the NSCF calculation with a consistent prefix/outdir.
 
 These functions prepare input text only. They do not launch `pw.x`, `bands.x`, or `dos.x`, parse band/DOS output files, or assert convergence.
+
+
+## Prepared BANDS workflow
+
+Provide `DFTTask.BANDS`, `DFTOutput.BAND_STRUCTURE`, and a structured `BandPath`. Each non-final vertex contains its reciprocal fractional coordinates, a label, and a positive `points_to_next` subdivision count; the final vertex uses zero. The adapter emits a `pw.x` deck using `calculation='bands'` and `K_POINTS crystal_b`. After that run completes, `prepare_qe_bands_postprocess_input` emits a `bands.x` namelist. QE documents `bands.x` as the utility that regroups/reorders the computed eigenvalues and writes a band file. [QE bands.x input reference](https://www.quantum-espresso.org/Doc/INPUT_BANDS.html).
+
+A named `band_path_ref` without actual vertices is not enough to generate an input deck. The application must supply or construct a real path for the chosen crystal; no universal high-symmetry path is guessed.
+
+## Prepared total-DOS workflow
+
+Provide `DFTTask.DOS`, `DFTOutput.DENSITY_OF_STATES`, and explicit `DOSSettings`. `prepare_pw_input` emits an NSCF deck using the configured uniform k-point mesh. After a compatible SCF and NSCF run in the same prefix/outdir, `prepare_qe_dos_postprocess_input` emits a `dos.x` namelist. The requested broadening is converted from eV to Ry; the energy window and grid spacing remain in eV, matching QE's input definition. [QE dos.x input reference](https://www.quantum-espresso.org/Doc/INPUT_DOS.html).
+
+The current DOS path is total DOS only. Projected DOS through `projwfc.x` is not yet modeled. These helpers generate input text only: no process launch, multi-stage dependency handling, output parsing, or normalized `BandStructureData`/`DensityOfStatesData` construction is implemented yet.
