@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 15 | Status: SCF, fixed-cell RELAX and variable-cell VC_RELAX execution --> 
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 16 | Status: SCF, fixed-cell RELAX and variable-cell VC_RELAX execution --> 
 
 # System Architecture
 
@@ -91,3 +91,8 @@ The common execution layer dispatches SCF, fixed-cell ionic RELAX and variable-c
 ## Electronic band and DOS workflow preparation (Rev. 15)
 
 The backend-neutral settings now include structured reciprocal-space `BandPath` vertices and explicit total-DOS energy-window/sampling settings. The Quantum ESPRESSO adapter can generate a `pw.x` BANDS deck, a corresponding `bands.x` post-processing input, an NSCF deck for total DOS, and a `dos.x` post-processing input. The common execution API and output parsers do not yet execute or normalize BANDS/DOS results. GPAW BANDS/DOS execution is also not implemented. See [Quantum ESPRESSO](QUANTUM_ESPRESSO.md) and [Electronic Structure](ELECTRONIC_STRUCTURE.md).
+
+
+## QE electronic post-processing execution (Rev. 16)
+
+The common execution result now optionally carries BandStructureData or DensityOfStatesData. The QE execution dispatcher supports sequential BANDS (pw.x SCF, pw.x bands path, bands.x, parse .gnu) and total DOS (pw.x SCF, pw.x NSCF, dos.x, parse DOS table). Each stage is gated on successful process completion; absent or malformed result files fail the workflow. QE band-path distance is explicitly marked as such rather than mislabeled as a 3D fractional k-vector. GPAW BANDS/DOS and spin-polarized BANDS are not yet supported. Tests mock external processes; no actual QE scientific calculation is implied.
