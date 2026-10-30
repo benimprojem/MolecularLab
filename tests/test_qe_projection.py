@@ -147,3 +147,39 @@ def test_fatband_builder_rejects_kpoint_and_spin_mismatch():
     )
     with pytest.raises(ValueError, match="spin channel"):
         build_fatband_dataset(wrong, projections)
+
+
+def test_parse_projwfc_stdout_preserves_original_band_order_and_fractional_kpoints():
+    from molecular_lab.calculations.qe_projection import parse_qe_projwfc_band_output
+
+    output = """
+    Atomic states used for projection
+    state # 1: atom 1 (Si), wfc 1 (l=0 m=0)
+    k = 0.0000000000 0.0000000000 0.0000000000
+    ==== e(   1) = -1.25000 eV ====
+    ==== e(   2) =  0.75000 eV ====
+    k = 0.5000000000 0.0000000000 0.0000000000
+    ==== e(   1) = -1.10000 eV ====
+    ==== e(   2) =  0.90000 eV ====
+    """
+    data = parse_qe_projwfc_band_output(output, fermi_level_ev=0.0)
+    assert data.channels[0].spin_channel == "total"
+    assert data.channels[0].energies_ev == (
+        (-1.25, -1.1),
+        (0.75, 0.9),
+    )
+    assert data.kpoints[1].coordinates == (0.5, 0.0, 0.0)
+    assert data.kpoints[1].coordinate_system == "fractional"
+
+
+def test_parse_projwfc_stdout_rejects_incomplete_band_indices():
+    from molecular_lab.calculations.qe_projection import (
+        QEProjectionParseError, parse_qe_projwfc_band_output,
+    )
+
+    output = """
+    k = 0 0 0
+    ==== e( 2) = 0.5 eV ====
+    """
+    with pytest.raises(QEProjectionParseError, match="contiguous"):
+        parse_qe_projwfc_band_output(output)
