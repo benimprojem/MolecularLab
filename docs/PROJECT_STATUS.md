@@ -40,7 +40,7 @@ The repository is a research/prototype codebase. A feature being implemented or 
 | QE atom/orbital PDOS | Implemented prototype | SCF → NSCF → projwfc.x; collinear scalar-relativistic support |
 | Band-edge / PDOS correlation | Implemented analysis helper | Energy-window summaries; not k-resolved band character |
 | QE k-resolved projection parser, fat-band data model and QE execution | Implemented prototype | Opt-in `DFTOutput.FAT_BAND_STRUCTURE`; synthetic workflow tests pass; real QE run still pending |
-| Fat-band visualization | Not implemented | Needs plot-ready series, filtering and visual component |
+| Fat-band plot-data preparation | Implemented prototype | Grouped series, reciprocal path distance, symmetry ticks, filters and display-only normalization; no renderer yet |
 | GPAW BANDS / DOS | Not implemented | Explicitly reported as unavailable |
 | Spin-polarized QE BANDS | Not implemented | Current BANDS runner rejects it |
 | Molecular electronic structure and spectra | Not implemented | Future work |
@@ -112,7 +112,8 @@ The conventional `band_structure` remains based on `bands.x`. Fat-band energies 
 
 - [x] Complete QE fat-band execution integration with synthetic/mocked workflow tests.
 - [ ] Verify parser and workflow against a real QE version and a small reference crystal.
-- [ ] Add fat-band plot-ready data export and visualization.
+- [x] Add plot-ready fat-band data export, grouping, filters and display-only normalization.
+- [ ] Add the actual fat-band renderer and user-facing visualization component.
 - [ ] Add atom, element and orbital filters to the visualization.
 - [ ] Add explicit display-only normalization options without modifying raw weights.
 - [ ] Revisit band-crossing continuity and state tracking with reference cases.
@@ -169,4 +170,4 @@ At the beginning of each new Molecular Lab conversation:
    - exact next step.
 7. Update the README only when the user-facing project capability/status materially changes.
 
-**Active hand-off point:** Fat-band visualization and plot-ready data export. CI for the execution pipeline and stale-output regression is green. Continue from `DFTExecutionResult.fat_band_structure`; inspect existing visualization conventions before adding a new plot interface. Do not restart the parser, execution pipeline, chemical graph, crystal foundation or PDOS implementation from scratch.
+**Active hand-off point:** Validate the new plot-data transformation with CI, then design the actual fat-band renderer/UI. Continue from `DFTExecutionResult.fat_band_structure` and `prepare_fatband_plot_data`; inspect existing visualization conventions before adding a new plot interface. Do not restart the parser, execution pipeline, chemical graph, crystal foundation or PDOS implementation from scratch.
