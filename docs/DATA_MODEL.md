@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 01 | Status: Initial data contract -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 02 | Status: Initial data contract -->
 
 # Domain Data Model
 
@@ -128,17 +128,23 @@ Coordinates must map unambiguously to atom IDs. A backend adapter must declare a
 
 ### 3.7 CrystalStructure
 
+The initial runtime implementation is in `molecular_lab/structures/crystal.py`.
+
 Required:
-- lattice vectors,
-- lattice unit,
-- atomic sites with fractional coordinates,
-- periodicity definition.
+- three row-vector lattice vectors in angstrom,
+- atomic sites with stable site IDs, element symbols, and fractional coordinates,
+- periodic boundary conditions for each lattice direction.
 
 Optional:
-- occupancies,
-- symmetry metadata,
-- magnetic moments/order,
-- supercell and defect annotations.
+- site occupancy in (0, 1],
+- oxidation state and magnetic moment,
+- descriptive space-group and magnetic-ordering metadata,
+- total cell charge,
+- vacancy, substitution, interstitial, and antisite defect annotations.
+
+The cell volume is validated as positive and non-zero. Fractional coordinates are preserved without automatic wrapping. A Cartesian-coordinate view is calculated using r = f A. Species sharing the same periodic site are checked so their occupancies do not sum above one. Defect annotations reference host site IDs where applicable; they do not themselves construct a defect supercell or calculate defect formation energies.
+
+See [CRYSTAL_STRUCTURES.md](CRYSTAL_STRUCTURES.md) for the implemented conventions and limitations.
 
 ### 3.8 StructuralAlternative
 
@@ -265,4 +271,4 @@ An initial offline reference-molecule catalogue is implemented under `molecular_
 
 ## 9. Implementation status
 
-This is a domain contract only. No runtime models, serializers, database tables, or validation routines are implemented by this document.
+This document specifies the shared domain contract. Initial runtime models now exist for composition, molecular graphs, periodic crystal/site/defect records, material response, and electronic-structure results. A complete versioned persistence serializer, database schema, and broad molecular/crystal structure conversion pipeline remain unimplemented.
