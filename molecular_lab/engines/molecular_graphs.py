@@ -3,7 +3,7 @@ Restricted acyclic molecular graph proposal engines.
 
 Version: 0.1
 Rev.: 01
-Status: Saturated, bond-order-aware acyclic, and bounded unicyclic prototypes.
+Status: Acyclic, unicyclic, and bounded linear fused-acene graph prototypes.
 
 The generators propose connectivity only. They do not establish geometry,
 energetics, stability, experimental existence, or synthesis feasibility.
@@ -22,7 +22,7 @@ _SUPPORTED_VALENCES = {"H": 1, "C": 4, "N": 3, "O": 2, "F": 1, "Cl": 1}
 _LIMITATIONS = (
     "Neutral species only; charged and radical states are not generated.",
     "Fixed common valences are used for H, C, N, O, F, and Cl only.",
-    "Acyclic and unicyclic connected heavy-atom skeletons are supported by separate generators; fused and multi-ring systems remain outside scope.",
+    "Acyclic, unicyclic, and linear fused-carbon acene skeletons are supported by separate generators; other fused, bridged, spiro, and general multi-ring systems remain outside scope.",
     "Aromaticity is not an explicit graph bond type; optional RDKit perception is limited to supported Kekule graphs. General resonance enumeration, hypervalence, coordination chemistry, and variable valence are outside scope.",
     "A graph proposal is not a 3D geometry, stability result, or synthesis prediction.",
 )
@@ -377,3 +377,136 @@ def iter_unicyclic_graphs(
                 emitted += 1
                 if emitted >= max_candidates:
                     return
+
+
+
+def _linear_acene_topology(ring_count: int) -> tuple[tuple[int, int], ...]:
+    """Build the carbon skeleton of a linearly fused sequence of six-membered rings."""
+    if ring_count < 2:
+        raise ValueError("ring_count must be at least 2")
+
+    edges: set[tuple[int, int]] = {
+        (0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (0, 5)
+    }
+    shared_edge = (2, 3)
+    next_atom = 6
+
+    for _ in range(1, ring_count):
+        left, right = shared_edge
+        new_path = (left, next_atom, next_atom + 1, next_atom + 2,
+                    next_atom + 3, right)
+        for a, b in zip(new_path, new_path[1:]):
+            edges.add((min(a, b), max(a, b)))
+        # The next ring shares the edge opposite the previous shared edge.
+        shared_edge = (next_atom + 1, next_atom + 2)
+        next_atom += 4
+
+    return tuple(sorted(edges))
+
+
+def _perfect_matchings(
+    node_count: int,
+    edges: tuple[tuple[int, int], ...],
+    *,
+    max_assignments: int,
+) -> Iterator[tuple[tuple[int, int], ...]]:
+    """Yield perfect matchings, bounding recursive search nodes examined."""
+    adjacency = {node: set() for node in range(node_count)}
+    for a, b in edges:
+        adjacency[a].add(b)
+        adjacency[b].add(a)
+
+    examined = 0
+
+    def search(
+        remaining: frozenset[int],
+        chosen: tuple[tuple[int, int], ...],
+    ) -> Iterator[tuple[tuple[int, int], ...]]:
+        nonlocal examined
+        examined += 1
+        if examined > max_assignments:
+            return
+        if not remaining:
+            yield tuple(sorted(chosen))
+            return
+
+        # Minimum-remaining-values ordering reduces branching and is stable.
+        node = min(
+            remaining,
+            key=lambda item: (len(adjacency[item] & remaining), item),
+        )
+        for neighbor in sorted(adjacency[node] & remaining):
+            yield from search(
+                remaining - {node, neighbor},
+                chosen + ((min(node, neighbor), max(node, neighbor)),),
+            )
+
+    yield from search(frozenset(range(node_count)), ())
+
+
+def iter_linear_fused_acene_graphs(
+    composition: Composition,
+    *,
+    max_candidates: int = 100,
+    max_heavy_atoms: int = 16,
+    max_assignments: int = 100000,
+) -> Iterator[MolecularGraph]:
+    """
+    Yield Kekule graph representations for neutral linearly fused benzene-ring
+    systems (acenes), beginning with naphthalene and anthracene.
+
+    This is a deliberately narrow multi-ring prototype: carbon-only heavy-atom
+    skeletons, consecutive six-membered rings sharing one edge, and one double
+    bond incident to each carbon in every Kekule assignment. Different yielded
+    Kekule assignments are resonance representations, not distinct constitutional
+    isomers or independent evidence of stability.
+    """
+    _validate_limits(max_candidates, max_heavy_atoms)
+    if isinstance(max_assignments, bool) or not isinstance(max_assignments, int) or max_assignments < 1:
+        raise ValueError("max_assignments must be a positive integer")
+    if composition.net_charge != 0:
+        return
+    if set(composition.counts) - {"C", "H"}:
+        return
+
+    carbon_count = composition.counts.get("C", 0)
+    hydrogen_count = composition.counts.get("H", 0)
+    if carbon_count < 10 or (carbon_count - 2) % 4:
+        return
+    ring_count = (carbon_count - 2) // 4
+    if ring_count < 2 or carbon_count > max_heavy_atoms:
+        return
+    if hydrogen_count != 2 * ring_count + 4:
+        return
+
+    edges = _linear_acene_topology(ring_count)
+    if len(edges) - carbon_count + 1 != ring_count:
+        return
+
+    degree = [0] * carbon_count
+    for a, b in edges:
+        degree[a] += 1
+        degree[b] += 1
+    if any(value not in (2, 3) for value in degree):
+        return
+    attached_h = tuple(3 - value for value in degree)
+    if sum(attached_h) != hydrogen_count:
+        return
+
+    emitted = 0
+    for matching in _perfect_matchings(
+        carbon_count, edges, max_assignments=max_assignments
+    ):
+        matched = set(matching)
+        weighted_edges = tuple(
+            (a, b, 2 if (a, b) in matched else 1) for a, b in edges
+        )
+        yield _build_graph(
+            tuple("C" for _ in range(carbon_count)),
+            weighted_edges,
+            attached_h,
+            "bounded_linear_fused_acene_kekule_v1",
+        )
+        emitted += 1
+        if emitted >= max_candidates:
+            return
