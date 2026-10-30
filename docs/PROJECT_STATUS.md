@@ -329,3 +329,25 @@ These are code-level tests using synthetic/mock data. Real QE execution, UPF com
 
 
 **Automatic warning attachment CI (2026-10-30):** Commit `566bfb790fce680a676c6b275fb45d884cb266e6` passed both jobs: RDKit enabled **301 passed, 1 skipped**; without RDKit **296 passed, 6 skipped**. Run: https://github.com/benimprojem/MolecularLab/actions/runs/41113643082. The zero-weight smoke test confirms warnings are attached to the returned `FatBandDataset` by default.
+
+## 17. QE Fat Band workflow rejection test (2026-10-30)
+
+- Added an end-to-end mocked workflow regression test that forces the
+  cross-source eigenvalue-spectrum validator to reject a mismatch after
+  bands.x and projwfc.x outputs have both been parsed.
+- Verified that execute_qe_bands() returns FAILED, preserves the mismatch
+  detail in its message, does not call build_fatband_dataset(), and leaves
+  fat_band_structure unset. This checks the workflow boundary, not only the
+  standalone comparison helper.
+- Test file: tests/test_qe_workflows.py.
+- Commit: 125292717aa7b2bd6325f6542d2cd31d0ed65bf5.
+- CI passed: RDKit enabled **302 passed, 1 skipped**; without RDKit
+  **297 passed, 6 skipped**.
+- Run: https://github.com/benimprojem/MolecularLab/actions/runs/41114211036.
+
+This remains synthetic/mocked workflow validation. It does not replace a
+real QE calculation or prove raw k-point coordinate identity. The next
+technical task is to define and test an unambiguous k-point identity check
+using the actual QE output formats/documented conventions before attempting
+band-crossing state tracking. Do not infer coordinate units from rounded
+stdout values or silently compare incompatible coordinate representations.
