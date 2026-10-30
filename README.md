@@ -1,15 +1,15 @@
 <!--
 Project: Molecular Lab
 Version: 0.1
-Rev.: 13
-Status: Initial project foundation
+Rev.: 14
+Status: Early foundation with initial calculation orchestration contracts
 -->
 
 # Molecular Lab
 
 **Molecular Lab** is a planned Windows desktop environment for exploring molecules, compounds, crystals, and functional materials through computational chemistry and materials-science workflows.
 
-> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, a bounded composition enumerator, advisory composition diagnostics, restricted bond-order-aware acyclic and unicyclic molecular graph prototypes, plus registered fused-benzenoid graph prototypes including anthracene and phenanthrene, a small offline reference-molecule catalogue, an optional RDKit adapter that identifies generated graphs against that catalogue, and an integrated bounded forward-discovery pipeline. General structure generation beyond the bounded prototypes (including unregistered fused layouts, bridged, spiro, and heteroaromatic systems), geometry optimization, stability assessment, and material-property calculations are not implemented yet.
+> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, a bounded composition enumerator, advisory composition diagnostics, restricted bond-order-aware acyclic and unicyclic molecular graph prototypes, registered fused-benzenoid graph prototypes including anthracene and phenanthrene, a small offline reference-molecule catalogue, an optional RDKit graph-identification adapter, and an integrated bounded forward-discovery pipeline. Material design/target records, frequency-dependent complex response records, explicit-criterion electrical behavior screening, and a common calculation-solver orchestration protocol are also implemented. These are data and software contracts, not evidence that external scientific solvers have run. General structure generation beyond the bounded prototypes, geometry optimization, stability assessment, production solver adapters, and actual material-property calculations are not implemented yet.
 
 ## 1. Project goal
 
@@ -44,137 +44,52 @@ The user specifies desired properties and constraints. Possible targets include:
 - Electronic structure, band gap, density of states, carrier concentration, and semiconductor/insulator/conductor behavior (with conditions and classification criteria stated).
 - Mechanical properties such as hardness, brittleness, and elastic moduli.
 - Thermal and phase stability under specified temperature and pressure.
-- Defects, vacancies, substitutions, interstitials, dopants, and their concentrations.
-- Element availability, cost, toxicity, and avoidance constraints.
+- Defects, vacancies, substitutions, dopants, and compositional constraints such as cost, abundance, toxicity, and rare-element avoidance.
 
-The search may include molecular compounds, bulk materials, crystal prototypes, and photonic structures where appropriate.
+## 3. Scientific integrity
 
-## 3. Scientific workflow
+Molecular Lab must distinguish experimental validation, database support, theoretical calculation, heuristic screening, and hypothesis. A proposed structure is not a confirmed substance; a local minimum is not automatically thermodynamic or kinetic stability; and a prediction must not be presented as an experimental fact.
 
-The intended balanced workflow is staged:
+Every numerical result should preserve units, operating conditions, method, software/backend version, evidence, uncertainty interpretation, convergence status, and limitations where applicable.
 
-1. Validate inputs and define search bounds.
-2. Generate candidate compositions and structures.
-3. Apply chemical and structural plausibility filters.
-4. Use databases, heuristics, or suitable fast models for initial screening.
-5. Run approximate calculations on promising candidates.
-6. Use higher-accuracy methods, including suitable quantum-chemistry or periodic DFT backends, for selected candidates.
-7. Evaluate stability, competing phases, decomposition pathways, and synthesis considerations where the available methods permit.
-8. Calculate requested properties, rank candidates, and report uncertainty and provenance.
+## 4. Calculation architecture
 
-A local energy minimum is not, by itself, proof of thermodynamic stability, kinetic persistence, experimental existence, or practical synthesizability. Results must clearly distinguish experimental evidence, database evidence, theoretical prediction, and unverified hypotheses.
+The initial common solver orchestration contract lives in `molecular_lab/engines/calculation_protocol.py`. It separates four calculation domains:
 
-## 4. Planned software architecture
+1. Electronic structure — band structures, density of states, band gaps, and Fermi levels.
+2. Electrical transport — conductivity, resistivity, and carrier transport.
+3. Magnetic response — susceptibility, permeability, anisotropy, and magnetic dynamics.
+4. Electromagnetic response — optical spectra, scattering, fields, resonances, and photonic bands.
 
-The project is designed around modular components:
+Each backend must declare the domains and methods it supports and report whether its software is actually available. The registry dispatches only compatible requests and returns explicit unsupported/unavailable/failed states rather than fabricating outputs.
 
-- **UI:** Windows desktop interface and user workflows.
-- **Core:** configuration, orchestration, task management, and shared data models.
-- **Chemistry:** element data, formula handling, valence and electron-count checks, and chemical constraints.
-- **Structures:** molecular graphs, isomer enumeration, 3D structures, crystal prototypes, and geometry handling.
-- **Calculations:** interfaces to computational backends and standardized calculation records.
-- **Materials:** solid-state properties, phases, defects, dopants, and optical/material analysis.
-- **Engines:** forward and inverse discovery workflows.
-- **Database:** local data, reference datasets, candidate records, and provenance.
+The protocol is an orchestration foundation only. Production solver adapters, job scheduling, cancellation, and physical calculations remain future work. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/METAMATERIALS.md](docs/METAMATERIALS.md).
 
-The architecture is intended to support optional external engines rather than assuming every dependency is installed.
+## 5. Large systems and metamaterials
 
-## 5. Planned scientific software integrations
+Large molecular systems require hierarchical fragment construction rather than exhaustive atom-by-atom enumeration. See [docs/LARGE_SYSTEMS.md](docs/LARGE_SYSTEMS.md) and [docs/FRAGMENTS.md](docs/FRAGMENTS.md).
 
-Potential integrations include:
+Metamaterials are modeled as periodic geometries linked to constituent materials. Their optical, magnetic, electrical, and electronic responses are treated as distinct but potentially coupled physical domains. See [docs/METAMATERIALS.md](docs/METAMATERIALS.md).
 
-| Tool | Intended role | Important limitation |
-|---|---|---|
-| RDKit | Molecular representations and cheminformatics | Not a universal chemistry engine; element and bonding coverage has limits |
-| xTB | Approximate molecular calculations | Accuracy and supported systems depend on the method and elements |
-| Psi4 | Molecular quantum chemistry | Primarily molecular workflows; method and basis-set choices matter |
-| ASE | Atomistic workflow management | Orchestrates calculations; does not itself provide every calculator |
-| Quantum ESPRESSO | Periodic electronic-structure calculations | Requires suitable pseudopotentials and careful convergence |
-| GPAW / CP2K | Additional electronic-structure workflows | Capabilities, accuracy, and computational cost vary by setup |
+## 6. Development principles
 
-These are candidate integrations, not claims that they are already installed or operational. RDKit is currently an optional, lazily loaded dependency for graph identification; install it with `pip install rdkit` in the project environment when this feature is needed. Its availability and InChI support should be checked in the target environment. Other backends may be added as the project develops.
+- Prefer bounded, deterministic, inspectable search procedures.
+- Keep optional scientific packages behind adapters.
+- Do not silently replace a requested method with a less accurate one.
+- Keep units and provenance attached to every result.
+- Distinguish search truncation from chemical rejection.
+- Record model limitations and uncertainty instead of hiding them.
+- Add tests for domain validation and backend boundaries before adding complex integrations.
 
-## 6. Result quality and evidence
+## 7. Repository structure
 
-Every result should record, where available:
+- `molecular_lab/core/` — foundational domain models.
+- `molecular_lab/chemistry/` — element data, formula parsing, and chemical diagnostics.
+- `molecular_lab/engines/` — discovery engines and calculation orchestration.
+- `molecular_lab/materials/` — metamaterial design, response, and classification records.
+- `docs/` — architecture and scientific design notes.
+- `tests/` — automated tests.
 
-- Formula, charge, spin, structure, and calculation conditions.
-- Backend, method, version, basis set or pseudopotential, and relevant settings.
-- Energy and calculated properties with units.
-- Convergence and validation status.
-- Stability category and the evidence supporting it.
-- Uncertainty, known limitations, and data provenance.
+## 8. License
 
-The interface should distinguish at least experimentally validated results, database-supported results, high-confidence theoretical candidates, exploratory predictions, and unresolved candidates. These categories must not be conflated.
-
-## 7. Repository map
-
-```text
-MolecularLab/
-├── README.md
-├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── CHEMICAL_MODEL.md
-│   ├── DATA_MODEL.md
-│   ├── DISCOVERY_ENGINE.md
-│   ├── CALCULATIONS.md
-│   └── LIMITATIONS.md
-├── molecular_lab/
-│   ├── core/
-│   ├── chemistry/
-│   ├── engines/
-│   ├── structures/
-│   ├── calculations/
-│   ├── materials/
-│   └── database/
-├── ui/
-└── tests/
-```
-
-## 8. Additional architecture notes
-
-- [Large molecular systems and scalability](docs/LARGE_SYSTEMS.md)
-- [Molecular fragment model](docs/FRAGMENTS.md)
-- [Metamaterial discovery architecture](docs/METAMATERIALS.md)
-
-Metamaterials are treated as a separate periodic-geometry and multiphysics discovery domain. Optical, magnetic, electrical-transport, and electronic-structure properties can be targeted together; molecular composition, crystal structure, and engineered unit-cell geometry remain separate but linkable representations. See [Metamaterial discovery architecture](docs/METAMATERIALS.md).
-
-## 9. Development principles
-
-1. Scientific assumptions and search bounds must be explicit.
-2. A generated candidate must not automatically be called a stable compound.
-3. Experimental observations and theoretical predictions must be labeled separately.
-4. Every numerical result must identify its method, conditions, units, and provenance.
-5. Missing calculation backends must be reported honestly; the application must never fabricate completed calculations.
-6. Fast screening and detailed verification should be separate, traceable stages.
-7. Modules should remain replaceable so new algorithms and calculation backends can be integrated without redesigning the whole application.
-
-## 10. Current status and roadmap
-
-### Version 0.1 — project foundation
-
-- [x] Establish repository structure.
-- [x] Define the two discovery directions.
-- [x] Document the scientific scope and development principles.
-- [x] Define the initial shared domain data contract and foundational Python records.
-- [x] Add the 118-element identity table and initial formula parser (syntax tests added; execution verification pending).
-- [x] Implement bounded, deterministic composition enumeration (advisory chemical diagnostics; they do not automatically reject compositions).
-- [x] Add initial composition-level electron-count and limited oxidation-state diagnostics (advisory only).
-- [x] Add a small offline reference-molecule catalogue with formula, synonym, and InChIKey lookup.
-- [x] Connect restricted graph proposals to catalogue matching, with optional RDKit canonical SMILES/InChIKey generation and formula-only fallback.
-- [x] Integrate composition enumeration, diagnostics, reference lookup, graph proposals, and structure identification into one bounded forward-discovery workflow.
-- [x] Add registered fused-benzenoid graph prototypes for naphthalene, anthracene, phenanthrene, and bounded longer linear acenes (Kekulé representations; not a general fused-ring engine).
-- [x] Add foundational molecular fragment and attachment-port records (assembly engine remains planned).
-- [x] Add foundational metamaterial unit-cell and typed optical, magnetic, electrical, and electronic-structure target records (calculation engines remain planned).
-- [ ] Expand structure generation and validation beyond the restricted prototype.
-- [ ] Add optional PubChem synchronization/import with rate limits, caching, and provenance retention.
-- [ ] Integrate the first calculation backend.
-- [ ] Build the first usable desktop workflow.
-
-A GitHub Actions test workflow is configured to run the test suite both with and without the optional RDKit dependency. Its first run has not yet been verified.
-
-Version **1.0** will be reserved for the first complete, usable release. Documentation-only updates and small corrections do not require a project version increase; they are tracked through per-file revision numbers.
-
-## 11. License and citation
-
-This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for the complete license text. The copyright notice currently uses the GitHub repository owner identifier `benimprojem`.
+This project is distributed under the MIT License. See [LICENSE](LICENSE).
