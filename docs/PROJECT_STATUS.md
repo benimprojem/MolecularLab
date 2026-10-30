@@ -275,3 +275,16 @@ unrun.
 - Added regression tests for inconsistent weights, NaN values, missing or duplicate coefficient keys, out-of-range state keys, duplicate fat-band states and duplicate orbital contributions.
 - Deliberately do not require projected weights to sum to one; incomplete projector bases and pseudopotential choices make that an invalid universal constraint. No automatic renormalization is introduced.
 - This is structural/data-integrity validation, not proof that QE physical projection basis is complete or that a real calculation has converged.
+
+
+**CI confirmation for milestone 13 (2026-10-30):** The final hardening commit
+`aeadeb08285774b46a304e2eb1f944449ba13142` passed both GitHub Actions jobs:
+- RDKit enabled: **294 passed, 1 skipped**.
+- Without RDKit: **289 passed, 6 skipped**.
+- Run: https://github.com/benimprojem/MolecularLab/actions/runs/41106841789
+
+The final validation covers synthetic projection records and dataset invariants.
+The next step is to add cross-checks against the crystal structure itself
+(atom count and per-index element identity) at the QE workflow boundary, then
+prepare a small reference-data comparison when a real QE environment and UPF
+are available. Real QE execution and scientific convergence remain pending.
