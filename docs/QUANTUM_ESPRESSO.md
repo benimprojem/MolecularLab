@@ -25,7 +25,7 @@ Implementation: `molecular_lab/calculations/quantum_espresso.py`.
 - Partial occupancy and defect annotations: the ASE bridge requires an explicit ordered, fully occupied structure
 - Non-3D VC-RELAX cell constraints
 - Charge-density and magnetic-moment output extraction
-- Automated multi-stage execution and normalized band/DOS output parsing
+- Projected DOS and other post-SCF workflows
 
 Unsupported requests raise `QuantumEspressoInputError`; they are not silently omitted.
 
@@ -77,3 +77,22 @@ A named `band_path_ref` without actual vertices is not enough to generate an inp
 Provide `DFTTask.DOS`, `DFTOutput.DENSITY_OF_STATES`, and explicit `DOSSettings`. `prepare_pw_input` emits an NSCF deck using the configured uniform k-point mesh. After a compatible SCF and NSCF run in the same prefix/outdir, `prepare_qe_dos_postprocess_input` emits a `dos.x` namelist. The requested broadening is converted from eV to Ry; the energy window and grid spacing remain in eV, matching QE's input definition. [QE dos.x input reference](https://www.quantum-espresso.org/Doc/INPUT_DOS.html).
 
 The current DOS path is total DOS only. Projected DOS through `projwfc.x` is not yet modeled. These helpers generate input text only: no process launch, multi-stage dependency handling, output parsing, or normalized `BandStructureData`/`DensityOfStatesData` construction is implemented yet.
+
+
+## Sequential execution
+
+The common execution entry point supports:
+
+- BANDS: prerequisite SCF, pw.x BANDS path, bands.x, parse filband.gnu.
+- Total DOS: prerequisite SCF, uniform-grid NSCF, dos.x, parse total DOS table.
+
+Each stage uses the same prefix and outdir. A later stage is not launched if an earlier process fails. A successful process without the expected result file is not considered a successful workflow.
+
+## Parsed output conventions
+
+- bands.x writes a .gnu file in eV, with one band per blank-separated block. MolecularLab stores its horizontal coordinate as KPoint.coordinate_system=path_distance; it is not represented as a 3D reciprocal coordinate.
+- dos.x total DOS is stored as energies in eV and DOS in states/eV. For spin-polarized DOS, up/down channels are kept separate. Additional integrated-DOS columns are not currently stored.
+- A Fermi level is stored only when explicitly found in the QE output. It is not guessed from the middle of a gap.
+- The current band parser does not receive occupation numbers from .gnu; consequently, band-gap assessment may remain undetermined without an explicit Fermi level or a richer occupation-bearing output source.
+
+The automated workflow tests mock external executables and result files. They verify orchestration and parsing contracts, not the physical correctness of a QE calculation.
