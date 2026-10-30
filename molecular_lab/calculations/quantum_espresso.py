@@ -368,6 +368,47 @@ def prepare_qe_dos_postprocess_input(
     )
 
 
+
+def prepare_qe_fatband_projection_input(
+    settings: DFTCalculationSettings,
+    *,
+    prefix: str = "molecular_lab",
+    outdir: str = "./tmp",
+) -> PreparedQEPostprocessInput:
+    """Prepare projwfc.x for per-eigenstate projections of a completed BANDS run.
+
+    projwfc.x writes atomic_proj.xml inside prefix.save. The XML stores the
+    complex projector amplitudes for each band, k-point and spin channel.
+    kresolveddos is deliberately not enabled: its energy-binned k-resolved DOS
+    is a different product from the per-eigenstate weights required for fat bands.
+    """
+    if settings.task is not DFTTask.BANDS or settings.band_path is None:
+        raise QuantumEspressoInputError(
+            "fat-band projection requires a BANDS task with a structured BandPath"
+        )
+    if settings.spin_polarized or settings.spin_orbit_coupling:
+        raise QuantumEspressoInputError(
+            "fat-band execution currently supports non-spin-polarized scalar projections only"
+        )
+    prefix = _token(prefix, "prefix")
+    text = "\n".join([
+        "&PROJWFC",
+        f"  prefix = '{prefix}'",
+        f"  outdir = {_quoted_path(outdir, 'outdir')}",
+        "  lsym = .false.",
+        "/",
+        "",
+    ])
+    return PreparedQEPostprocessInput(
+        input_text=text,
+        required_saved_calculation=f"{outdir.rstrip('/')}/{prefix}.save",
+        warnings=(
+            "projwfc.x must read the same completed pw.x BANDS wavefunctions used by bands.x.",
+            "atomic_proj.xml contains raw per-state projections; these are distinct from energy-binned PDOS.",
+            "The caller must preserve original QE eigenstate ordering when joining weights to energies.",
+        ),
+    )
+
 def prepare_qe_projected_dos_postprocess_input(
     settings: DFTCalculationSettings,
     *,
