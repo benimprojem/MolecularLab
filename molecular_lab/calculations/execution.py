@@ -1,7 +1,7 @@
 """Explicit execution and result normalization for periodic DFT backends.
 
-Input preparation is separate from execution. The initial runner supports SCF
-and fixed-cell ionic RELAX for Quantum ESPRESSO and GPAW; VC_RELAX, BANDS and
+Input preparation is separate from execution. The runner supports SCF, fixed-cell
+ionic RELAX and variable-cell VC_RELAX for Quantum ESPRESSO and GPAW; BANDS and
 DOS remain separate future workflows.
 """
 from __future__ import annotations
@@ -78,8 +78,8 @@ def _validate_request(
         raise TypeError("structure must be a CrystalStructure")
     if not isinstance(settings, DFTCalculationSettings):
         raise TypeError("settings must be DFTCalculationSettings")
-    if settings.task not in (DFTTask.SCF, DFTTask.RELAX):
-        raise ValueError("execution currently supports SCF and fixed-cell RELAX only")
+    if settings.task not in (DFTTask.SCF, DFTTask.RELAX, DFTTask.VC_RELAX):
+        raise ValueError("execution currently supports SCF, RELAX and VC_RELAX only")
     allowed = {
         DFTTask.SCF: {DFTOutput.TOTAL_ENERGY, DFTOutput.STRESS},
         DFTTask.RELAX: {DFTOutput.TOTAL_ENERGY, DFTOutput.FORCES, DFTOutput.STRESS},
@@ -240,7 +240,7 @@ def execute_quantum_espresso(
     timeout_seconds: float = 3600.0,
     command_prefix: Sequence[str] = (),
 ) -> DFTExecutionResult:
-    """Run QE pw.x for SCF or fixed-cell ionic RELAX in an existing directory."""
+    """Run QE pw.x for SCF, fixed-cell RELAX or variable-cell VC_RELAX."""
     _validate_request(structure, settings)
     if timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be positive")
@@ -388,7 +388,7 @@ def execute_gpaw(
     *,
     log_file: str | Path | None = None,
 ) -> DFTExecutionResult:
-    """Run GPAW SCF or fixed-cell ionic RELAX through ASE."""
+    """Run GPAW SCF, fixed-cell RELAX or variable-cell VC_RELAX through ASE."""
     _validate_request(structure, settings)
     try:
         from molecular_lab.calculations.gpaw import (
