@@ -17,11 +17,11 @@ Specify the forward and inverse candidate-search workflows and record the implem
 3. Apply explainable composition-level diagnostics.
 4. Query the local reference catalogue and, when enabled, external reference databases.
 5. Propose molecular graphs or crystal prototypes within explicitly stated model coverage.
-5. Enumerate relevant isomers, conformers, or structural variants.
-6. Build initial geometries.
-7. Optimize and validate structures using available backends.
-8. Evaluate requested properties and stability evidence.
-9. Group, rank, and report candidates with confidence and provenance.
+6. Enumerate relevant isomers, conformers, or structural variants.
+7. Build initial geometries.
+8. Optimize and validate structures using available backends.
+9. Evaluate requested properties and stability evidence.
+10. Group, rank, and report candidates with confidence and provenance.
 
 The engine must not treat all integer element-count combinations as chemically meaningful. Search limits must be visible and configurable. Unusual compositions should not be rejected solely by intuition; they should be assessed using documented rules and suitable methods.
 
@@ -90,6 +90,16 @@ This model does **not** cover double/triple bonds, aromatic systems, rings, char
 
 A proposed graph is only a connectivity hypothesis. It is not a 3D geometry, optimized structure, energy minimum, stability prediction, experimental observation, or synthesis guarantee.
 
+### 2.7 Graph-to-catalogue structure identification — implemented
+
+`molecular_lab/engines/structure_identification.py` connects the restricted graph proposals to the offline reference catalogue.
+
+For each graph, the adapter derives its elemental formula and attempts to construct a molecular representation with optional RDKit. When RDKit is available and sanitization succeeds, it calculates canonical SMILES and an InChIKey, then uses the InChIKey for exact catalogue matching. This allows the two generated C2H6O connectivity isomers to be distinguished as ethanol and dimethyl ether.
+
+RDKit is a lazy optional dependency. If it is not installed, or if the graph cannot be converted, the adapter falls back to formula-level lookup and clearly reports that exact identity is unresolved. A conversion failure is not silently treated as a novel structure. RDKit's documented Python interface provides molecular construction, sanitization, canonical SMILES, and optional InChI support; installation is environment-dependent.
+
+This adapter inherits the graph generator's narrow chemical coverage. It does not make the graph generator universal, and a successful identifier match does not validate 3D geometry, stability, or synthesis feasibility.
+
 ## 3. Formula-based exploration
 
 When a fixed formula is supplied, the engine should preserve its atom counts and explore only structures consistent with those counts. As coverage expands, this will include connectivity, isomers, conformers, and geometries. Current graph proposals cover only the restricted saturated acyclic domain above.
@@ -117,10 +127,10 @@ Implemented:
 - Offline reference-molecule seed catalogue with formula/name lookup and InChIKey identity matching.
 - Initial electron-count and formal oxidation-state diagnostics.
 - Backend-neutral molecular atom, bond, and graph records.
-- Restricted neutral saturated acyclic graph proposal prototype.
+- Restricted neutral saturated acyclic graph proposal prototype.\n- Graph-to-catalogue identification adapter with optional RDKit canonical SMILES/InChIKey generation and formula-only fallback.
 
 Not implemented:
-- General-purpose molecular graph generation beyond the stated prototype scope.
+- General-purpose molecular graph generation beyond the stated prototype scope.\n- RDKit installation/configuration in a packaged application environment; the adapter is optional and lazy-loaded.
 - Double/triple bond, ring, aromatic, radical, charged, hypervalent, or coordination graph generation.
 - Crystal structure generation.
 - 3D geometry generation/optimization, stability assessment, or material-property calculations.
