@@ -12,7 +12,8 @@ from math import isfinite
 from types import MappingProxyType
 from typing import Mapping, Protocol, runtime_checkable
 
-from molecular_lab.materials.electronic_structure import BandStructureData, DensityOfStatesData\nfrom molecular_lab.materials.response import MaterialResponseDataset
+from molecular_lab.materials.electronic_structure import BandStructureData, DensityOfStatesData
+from molecular_lab.materials.response import MaterialResponseDataset
 
 
 class CalculationDomain(str, Enum):
@@ -108,6 +109,8 @@ class CalculationResult:
     solver_id: str
     message: str = ""
     response_datasets: tuple[MaterialResponseDataset, ...] = ()
+    band_structures: tuple[BandStructureData, ...] = ()
+    density_of_states: tuple[DensityOfStatesData, ...] = ()
     scalar_outputs: Mapping[str, str | int | float | bool] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -124,7 +127,9 @@ class CalculationResult:
             if not isinstance(value, (str, int, float, bool)):
                 raise TypeError("scalar outputs must be scalar JSON-compatible values")
         object.__setattr__(self, "scalar_outputs", MappingProxyType(outputs))
-        object.__setattr__(self, "response_datasets", tuple(self.response_datasets))\n        object.__setattr__(self, "band_structures", tuple(self.band_structures))\n        object.__setattr__(self, "density_of_states", tuple(self.density_of_states))
+        object.__setattr__(self, "response_datasets", tuple(self.response_datasets))
+        object.__setattr__(self, "band_structures", tuple(self.band_structures))
+        object.__setattr__(self, "density_of_states", tuple(self.density_of_states))
 
 
 @runtime_checkable
