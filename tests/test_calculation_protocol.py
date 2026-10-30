@@ -2,7 +2,10 @@
 
 import pytest
 
-from molecular_lab.materials.electronic_structure import (\n    BandChannelData, BandStructureData, DensityOfStatesChannel, DensityOfStatesData, KPoint,\n)\nfrom molecular_lab.engines.calculation_protocol import (
+from molecular_lab.materials.electronic_structure import (
+    BandChannelData, BandStructureData, DensityOfStatesChannel, DensityOfStatesData, KPoint,
+)
+from molecular_lab.engines.calculation_protocol import (
     CalculationDomain, CalculationRequest, CalculationResult, CalculationStatus,
     SolverAvailability, SolverCapability, SolverRegistry,
 )
