@@ -91,8 +91,11 @@ def test_smearing_width_and_scheme_are_explicit():
 
 def test_convergence_settings_validate_positive_values():
     assert ConvergenceSettings(max_scf_iterations=250).max_scf_iterations == 250
+    assert ConvergenceSettings(stress_tolerance_gpa=0.2).stress_tolerance_gpa == 0.2
     with pytest.raises(ValueError):
         ConvergenceSettings(energy_tolerance_ev=0)
+    with pytest.raises(ValueError):
+        ConvergenceSettings(stress_tolerance_gpa=0)
     with pytest.raises(ValueError):
         ConvergenceSettings(max_scf_iterations=0)
 
