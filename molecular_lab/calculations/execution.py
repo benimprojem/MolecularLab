@@ -20,14 +20,14 @@ from molecular_lab.calculations.dft_settings import (
 )
 from molecular_lab.calculations.quantum_espresso import (
     prepare_pw_input, prepare_qe_bands_postprocess_input,
-    prepare_qe_dos_postprocess_input,
+    prepare_qe_dos_postprocess_input, prepare_qe_projected_dos_postprocess_input,
 )
 from molecular_lab.calculations.qe_output import (
     QEOutputParseError, parse_qe_bands_gnu, parse_qe_fermi_level,
-    parse_qe_total_dos,
+    parse_qe_total_dos, parse_qe_projected_dos,
 )
 from molecular_lab.materials.electronic_structure import (
-    BandStructureData, DensityOfStatesData,
+    BandStructureData, DensityOfStatesData, ProjectedDensityOfStatesData,
 )
 from molecular_lab.structures.crystal import CrystalSite, CrystalStructure
 
@@ -56,6 +56,7 @@ class DFTExecutionResult:
     stress_gpa: tuple[tuple[float, float, float], ...] | None = None
     band_structure: BandStructureData | None = None
     density_of_states: DensityOfStatesData | None = None
+    projected_density_of_states: ProjectedDensityOfStatesData | None = None
 
     @property
     def succeeded(self) -> bool:
@@ -694,13 +695,19 @@ def execute_qe_dos(
     working_directory: str | Path,
     executable: str = "pw.x",
     dos_executable: str = "dos.x",
+    projwfc_executable: str = "projwfc.x",
     timeout_seconds: float = 3600.0,
     command_prefix: Sequence[str] = (),
     output_file: str = "molecular_lab.dos",
+    pdos_prefix: str = "molecular_lab.pdos",
 ) -> DFTExecutionResult:
-    """Execute SCF -> NSCF -> dos.x and parse the total DOS result."""
+    """Execute SCF -> NSCF -> optional dos.x/projwfc.x post-processing."""
     if settings.task is not DFTTask.DOS or settings.dos is None:
         raise ValueError("execute_qe_dos requires DOS settings")
+    wants_total = DFTOutput.DENSITY_OF_STATES in settings.requested_outputs
+    wants_projected = DFTOutput.PROJECTED_DOS in settings.requested_outputs
+    if not (wants_total or wants_projected):
+        raise ValueError("DOS task must request total DOS, projected DOS, or both")
     workdir = Path(working_directory).expanduser().resolve()
     if not workdir.is_dir():
         raise ValueError("working_directory must be an existing directory")
@@ -717,7 +724,10 @@ def execute_qe_dos(
         return replace(scf_result, message="DOS workflow stopped at prerequisite SCF: " + scf_result.message)
     try:
         nscf_input = prepare_pw_input(structure, settings, outdir="./tmp", pseudo_dir="./pseudo")
-        dos_input = prepare_qe_dos_postprocess_input(settings, output_file=output_file)
+        dos_input = prepare_qe_dos_postprocess_input(settings, output_file=output_file) if wants_total else None
+        pdos_input = prepare_qe_projected_dos_postprocess_input(
+            settings, pdos_prefix=pdos_prefix,
+        ) if wants_projected else None
     except Exception as exc:
         return DFTExecutionResult(
             "quantum_espresso", DFTExecutionStatus.FAILED,
@@ -732,45 +742,89 @@ def execute_qe_dos(
     )
     if error is not None:
         return replace(error, message="DOS workflow stopped at pw.x NSCF stage: " + error.message)
-    dos_run, error = _run_qe_input(
-        dos_executable, dos_input.input_text, workdir=workdir,
-        timeout_seconds=timeout_seconds, command_prefix=command_prefix,
-    )
-    if error is not None:
-        return replace(error, message="DOS workflow stopped at dos.x stage: " + error.message)
-    dos_path = workdir / output_file
-    if not dos_path.is_file():
-        return DFTExecutionResult(
-            "quantum_espresso", DFTExecutionStatus.FAILED,
-            f"dos.x completed but expected output was not found: {dos_path.name}",
-            total_energy_ev=scf_result.total_energy_ev,
-            backend_version=scf_result.backend_version,
-            stdout=(nscf_run.stdout or "") + (dos_run.stdout or ""),
-            stderr=(nscf_run.stderr or "") + (dos_run.stderr or ""),
+    stdout_parts = [scf_result.stdout or "", nscf_run.stdout or ""]
+    stderr_parts = [nscf_run.stderr or ""]
+    last_run = nscf_run
+    dos_data = None
+    projected_data = None
+    if wants_total:
+        dos_run, error = _run_qe_input(
+            dos_executable, dos_input.input_text, workdir=workdir,
+            timeout_seconds=timeout_seconds, command_prefix=command_prefix,
         )
-    try:
-        dos_data = parse_qe_total_dos(
-            dos_path.read_text(encoding="utf-8"),
-            spin_polarized=settings.spin_polarized,
-            fermi_level_ev=parse_qe_fermi_level(scf_result.stdout),
-            backend_version=scf_result.backend_version,
+        if error is not None:
+            return replace(error, message="DOS workflow stopped at dos.x stage: " + error.message)
+        last_run = dos_run
+        stdout_parts.append(dos_run.stdout or "")
+        stderr_parts.append(dos_run.stderr or "")
+        dos_path = workdir / output_file
+        if not dos_path.is_file():
+            return DFTExecutionResult(
+                "quantum_espresso", DFTExecutionStatus.FAILED,
+                f"dos.x completed but expected output was not found: {dos_path.name}",
+                total_energy_ev=scf_result.total_energy_ev,
+                backend_version=scf_result.backend_version,
+                stdout="".join(stdout_parts), stderr="".join(stderr_parts),
+            )
+        try:
+            dos_data = parse_qe_total_dos(
+                dos_path.read_text(encoding="utf-8"),
+                spin_polarized=settings.spin_polarized,
+                fermi_level_ev=parse_qe_fermi_level(scf_result.stdout),
+                backend_version=scf_result.backend_version,
+            )
+        except (OSError, QEOutputParseError) as exc:
+            return DFTExecutionResult(
+                "quantum_espresso", DFTExecutionStatus.FAILED,
+                f"Total DOS output parsing failed: {exc}",
+                total_energy_ev=scf_result.total_energy_ev,
+                backend_version=scf_result.backend_version,
+            )
+    if wants_projected:
+        pdos_run, error = _run_qe_input(
+            projwfc_executable, pdos_input.input_text, workdir=workdir,
+            timeout_seconds=timeout_seconds, command_prefix=command_prefix,
         )
-    except (OSError, QEOutputParseError) as exc:
-        return DFTExecutionResult(
-            "quantum_espresso", DFTExecutionStatus.FAILED,
-            f"DOS workflow output parsing failed: {exc}",
-            total_energy_ev=scf_result.total_energy_ev,
-            backend_version=scf_result.backend_version,
-        )
+        if error is not None:
+            return replace(error, message="DOS workflow stopped at projwfc.x stage: " + error.message)
+        last_run = pdos_run
+        stdout_parts.append(pdos_run.stdout or "")
+        stderr_parts.append(pdos_run.stderr or "")
+        pdos_paths = sorted(workdir.glob(pdos_prefix + ".pdos_atm#*"))
+        if not pdos_paths:
+            return DFTExecutionResult(
+                "quantum_espresso", DFTExecutionStatus.FAILED,
+                "projwfc.x completed but no atomic PDOS files were found.",
+                total_energy_ev=scf_result.total_energy_ev,
+                backend_version=scf_result.backend_version,
+                stdout="".join(stdout_parts), stderr="".join(stderr_parts),
+            )
+        try:
+            projected_data = parse_qe_projected_dos(
+                {path.name: path.read_text(encoding="utf-8") for path in pdos_paths},
+                spin_polarized=settings.spin_polarized,
+                fermi_level_ev=parse_qe_fermi_level(scf_result.stdout),
+                backend_version=scf_result.backend_version,
+            )
+        except (OSError, QEOutputParseError) as exc:
+            return DFTExecutionResult(
+                "quantum_espresso", DFTExecutionStatus.FAILED,
+                f"Projected DOS output parsing failed: {exc}",
+                total_energy_ev=scf_result.total_energy_ev,
+                backend_version=scf_result.backend_version,
+            )
+    requested = "total DOS" if wants_total else ""
+    if wants_projected:
+        requested += (" and " if requested else "") + "atom/orbital PDOS"
     return DFTExecutionResult(
         "quantum_espresso", DFTExecutionStatus.SUCCEEDED,
-        "QE SCF, NSCF and dos.x stages completed; total DOS data were parsed.",
+        f"QE SCF, NSCF and requested {requested} post-processing completed.",
         total_energy_ev=scf_result.total_energy_ev, converged=True,
-        return_code=dos_run.returncode,
+        return_code=last_run.returncode,
         backend_version=scf_result.backend_version,
-        stdout=(scf_result.stdout or "") + (nscf_run.stdout or "") + (dos_run.stdout or ""),
-        stderr=(nscf_run.stderr or "") + (dos_run.stderr or ""),
+        stdout="".join(stdout_parts), stderr="".join(stderr_parts),
         density_of_states=dos_data,
+        projected_density_of_states=projected_data,
     )
 
 
