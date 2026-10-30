@@ -362,7 +362,7 @@ def execute_gpaw(
             target = prepared.atoms
             optimizer = BFGS(
                 target,
-                logfile=str(log_file) if log_file is not None else "-",
+                logfile=(str(log_file) + ".optimizer") if log_file is not None else "-",
             )
             optimizer_converged = optimizer.run(
                 fmax=settings.convergence.force_tolerance_ev_per_angstrom,
