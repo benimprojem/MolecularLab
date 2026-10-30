@@ -1,7 +1,7 @@
 <!--
 Project: Molecular Lab
 Version: 0.1
-Rev.: 05
+Rev.: 06
 Status: Initial project foundation
 -->
 
@@ -116,7 +116,6 @@ MolecularLab/
 │   ├── DATA_MODEL.md
 │   ├── DISCOVERY_ENGINE.md
 │   ├── CALCULATIONS.md
-│   ├── DISCOVERY_ENGINE.md
 │   └── LIMITATIONS.md
 ├── molecular_lab/
 │   ├── core/
@@ -125,7 +124,6 @@ MolecularLab/
 │   ├── structures/
 │   ├── calculations/
 │   ├── materials/
-│   ├── engines/
 │   └── database/
 ├── ui/
 └── tests/
@@ -159,6 +157,8 @@ MolecularLab/
 - [ ] Add optional PubChem synchronization/import with rate limits, caching, and provenance retention.
 - [ ] Integrate the first calculation backend.
 - [ ] Build the first usable desktop workflow.
+
+A GitHub Actions test workflow is configured to run the test suite both with and without the optional RDKit dependency. Its first run has not yet been verified.
 
 Version **1.0** will be reserved for the first complete, usable release. Documentation-only updates and small corrections do not require a project version increase; they are tracked through per-file revision numbers.
 
