@@ -108,7 +108,7 @@ def prepare_pw_input(
         DFTTask.SCF: {DFTOutput.TOTAL_ENERGY, DFTOutput.STRESS},
         DFTTask.RELAX: {DFTOutput.TOTAL_ENERGY, DFTOutput.FORCES, DFTOutput.STRESS},
         DFTTask.VC_RELAX: {DFTOutput.TOTAL_ENERGY, DFTOutput.FORCES, DFTOutput.STRESS},
-        DFTTask.BANDS: {DFTOutput.BAND_STRUCTURE},
+        DFTTask.BANDS: {DFTOutput.BAND_STRUCTURE, DFTOutput.FAT_BAND_STRUCTURE},
         DFTTask.DOS: {DFTOutput.DENSITY_OF_STATES, DFTOutput.PROJECTED_DOS},
     }[settings.task]
     unsupported = set(settings.requested_outputs).difference(supported_outputs)
