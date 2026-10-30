@@ -377,7 +377,7 @@ def test_gpaw_vc_relax_uses_cell_filter_and_checks_stress(monkeypatch):
 
     atoms = FakeAtoms()
     prepared = types.SimpleNamespace(atoms=atoms)
-    fake_calculator = FakeCalculator()
+    fake_calculator = types.SimpleNamespace()
     fake_gpaw = types.ModuleType("gpaw")
     fake_gpaw.__version__ = "test-gpaw-vc"
     fake_ase_optimize = types.ModuleType("ase.optimize")
