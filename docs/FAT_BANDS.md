@@ -141,3 +141,13 @@ calculated from the fractional k-points, the direct lattice vectors and the
 reciprocal lattice (including the 2π convention). High-symmetry labels and
 their exact path positions are returned as symmetry ticks. The supplied
 \`BandPath\` must match the fat-band k-point sequence exactly.
+
+
+## SVG rendering
+
+\`render_fatband_svg\` creates a self-contained SVG from \`FatBandPlotData\`
+using only the Python standard library. It draws the underlying band curves,
+high-symmetry boundaries and labels, and atom/orbital contribution markers.
+Marker size follows the selected display-weight scale; each marker's SVG title
+retains its raw weight. This provides a renderer-independent file format while
+the desktop UI framework remains undecided.
