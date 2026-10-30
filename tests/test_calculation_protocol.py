@@ -2,7 +2,7 @@
 
 import pytest
 
-from molecular_lab.engines.calculation_protocol import (
+from molecular_lab.materials.electronic_structure import (\n    BandChannelData, BandStructureData, DensityOfStatesChannel, DensityOfStatesData, KPoint,\n)\nfrom molecular_lab.engines.calculation_protocol import (
     CalculationDomain, CalculationRequest, CalculationResult, CalculationStatus,
     SolverAvailability, SolverCapability, SolverRegistry,
 )
@@ -122,3 +122,20 @@ def test_registry_rejects_duplicate_solver_ids():
 def test_explicit_unknown_solver_is_unsupported():
     result = SolverRegistry().execute(_request(), solver_id="missing")
     assert result.status is CalculationStatus.UNSUPPORTED
+
+
+def test_calculation_result_can_carry_band_structure_and_dos():
+    band = BandStructureData(
+        (KPoint((0.0, 0.0, 0.0), 1.0),),
+        (BandChannelData("total", ((-1.0,), (1.0,)), ((2.0,), (0.0,))),),
+    )
+    dos = DensityOfStatesData(
+        (-1.0, 0.0, 1.0),
+        (DensityOfStatesChannel("total", (0.1, 0.2, 0.1)),),
+    )
+    result = CalculationResult(
+        "req-electronic", CalculationStatus.SUCCEEDED, "fake-dft",
+        band_structures=(band,), density_of_states=(dos,),
+    )
+    assert result.band_structures == (band,)
+    assert result.density_of_states == (dos,)
