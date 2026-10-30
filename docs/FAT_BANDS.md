@@ -178,11 +178,14 @@ fatband_settings = replace(
     requested_outputs=(DFTOutput.FAT_BAND_STRUCTURE,),
 )
 
+working_directory = Path("calculations/silicon-bands")
+working_directory.mkdir(parents=True, exist_ok=True)
+
 result = execute_dft_calculation(
     backend="qe",
     structure=structure,
     settings=fatband_settings,
-    working_directory=Path("calculations/silicon-bands"),
+    working_directory=working_directory,
     executable="pw.x",
     bands_executable="bands.x",
     projwfc_executable="projwfc.x",
