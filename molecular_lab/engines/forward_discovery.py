@@ -36,6 +36,7 @@ from molecular_lab.engines.composition_enumerator import iter_compositions
 from molecular_lab.engines.molecular_graphs import (
     iter_acyclic_graphs,
     iter_unicyclic_graphs,
+    iter_linear_fused_acene_graphs,
 )
 from molecular_lab.engines.structure_identification import (
     GraphIdentificationResult,
@@ -73,8 +74,8 @@ def iter_forward_discovery(
     diagnostics and catalogue status, even if no graph can be proposed.
 
     The current graph prototypes are molecular-only, neutral, and limited to
-    fixed-valence H/C/N/O/F/Cl chemistry with bond orders 1-3. They cover
-    acyclic and bounded unicyclic heavy-atom skeletons. Out-of-scope compositions remain
+    fixed-valence H/C/N/O/F/Cl chemistry with bond orders 1-3, plus a narrow
+    carbon-only linear fused-acene generator. Out-of-scope compositions remain
     visible in the output with an explanatory graph-generation status.
     """
     for name, value in (
@@ -142,11 +143,17 @@ def iter_forward_discovery(
                 max_heavy_atoms=max_heavy_atoms,
                 max_assignments=max_graph_assignments,
             )
+            fused_iter = iter_linear_fused_acene_graphs(
+                composition,
+                max_candidates=max_graphs_per_composition,
+                max_heavy_atoms=max_heavy_atoms,
+                max_assignments=max_graph_assignments,
+            )
             proposed: list[MolecularGraph] = []
-            for acyclic_graph, cyclic_graph in zip_longest(
-                acyclic_iter, cyclic_iter
+            for graph_batch in zip_longest(
+                acyclic_iter, cyclic_iter, fused_iter
             ):
-                for graph in (acyclic_graph, cyclic_graph):
+                for graph in graph_batch:
                     if graph is not None:
                         proposed.append(graph)
                         if len(proposed) >= max_graphs_per_composition:
@@ -161,7 +168,7 @@ def iter_forward_discovery(
                 status = "graphs_proposed"
                 note = (
                     "Connectivity hypotheses were generated using the bounded "
-                    "acyclic and unicyclic fixed-valence graph models."
+                    "acyclic, unicyclic, and bounded linear fused-acene graph models."
                 )
             else:
                 status = "no_graph_within_prototype_scope"
