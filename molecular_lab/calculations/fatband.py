@@ -1,7 +1,7 @@
 """Backend-neutral fat-band records and QE projection-to-band mapping."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from math import isfinite
 
 from molecular_lab.calculations.qe_projection import QEAtomicProjectionData
@@ -57,6 +57,30 @@ class FatBandPoint:
 
 
 @dataclass(frozen=True, slots=True)
+class FatBandProjectionWarning:
+    """Advisory about a suspicious raw projection-weight total or component."""
+
+    code: str
+    message: str
+    kpoint_index: int
+    band_index: int
+    spin_channel: str
+    observed_value: float
+    threshold: float
+
+    def __post_init__(self) -> None:
+        if not self.code.strip() or not self.message.strip() or not self.spin_channel.strip():
+            raise ValueError("projection warning code, message and spin channel are required")
+        if (isinstance(self.kpoint_index, bool) or not isinstance(self.kpoint_index, int)
+                or self.kpoint_index < 0 or isinstance(self.band_index, bool)
+                or not isinstance(self.band_index, int) or self.band_index < 1):
+            raise ValueError("projection warning state indices are invalid")
+        if (not isfinite(self.observed_value) or not isfinite(self.threshold)
+                or self.observed_value < 0 or self.threshold < 0):
+            raise ValueError("projection warning values must be finite and non-negative")
+
+
+@dataclass(frozen=True, slots=True)
 class FatBandDataset:
     """Band energies and atom/orbital weights on the same sampled k-point grid."""
 
@@ -66,6 +90,7 @@ class FatBandDataset:
     points: tuple[FatBandPoint, ...]
     method: str = "Quantum ESPRESSO projwfc.x atomic projections"
     notes: tuple[str, ...] = ()
+    projection_warnings: tuple[FatBandProjectionWarning, ...] = ()
 
     def __post_init__(self) -> None:
         kpoints = tuple(self.kpoints)
@@ -110,8 +135,12 @@ class FatBandDataset:
                     raise ValueError("source wavefunction indices must be unique positive integers")
         object.__setattr__(self, "kpoints", kpoints)
         object.__setattr__(self, "spin_channels", spins)
+        warnings = tuple(self.projection_warnings)
+        if any(not isinstance(item, FatBandProjectionWarning) for item in warnings):
+            raise ValueError("projection_warnings must contain FatBandProjectionWarning records")
         object.__setattr__(self, "points", points)
         object.__setattr__(self, "notes", tuple(self.notes))
+        object.__setattr__(self, "projection_warnings", warnings)
 
 
 def _orbital_label(angular_momentum: int, magnetic_number: int | None) -> str:
@@ -238,7 +267,7 @@ def build_fatband_dataset(
                     contributions=tuple(contributions),
                 ))
 
-    return FatBandDataset(
+    dataset = FatBandDataset(
         kpoints=bands.kpoints,
         spin_channels=projections.spin_channels,
         number_of_bands=number_of_bands,
@@ -249,6 +278,10 @@ def build_fatband_dataset(
             "The join assumes identical k-point ordering from the same saved pw.x calculation.",
             "Band energies and k-point coordinates come from BandStructureData.",
         ),
+    )
+    return replace(
+        dataset,
+        projection_warnings=diagnose_fatband_projection_weights(dataset),
     )
 
 def validate_band_energy_spectra(
