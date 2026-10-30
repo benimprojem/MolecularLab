@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 00 -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 01 -->
 
 # Metamaterial Discovery Architecture
 
@@ -7,6 +7,20 @@
 Metamaterials are a first-class research domain in Molecular Lab. Their response can be dominated by engineered subwavelength or wavelength-scale structure, not only by the intrinsic chemistry of a constituent material. The application must therefore model material composition and repeating geometry as separate but linkable layers.
 
 This document defines the intended discovery and validation workflow. The initial Python records store a proposed unit-cell geometry, lattice periods, spectral band, operating conditions, and target properties. They do not calculate or validate electromagnetic response.
+
+## Multiphysics property domains
+
+The metamaterial engine must support coupled investigation across these domains:
+
+- **Optical:** complex refractive index, permittivity, reflectance, transmittance, absorption, phase delay, polarization conversion, optical activity, dispersion, and optical loss.
+- **Magnetic:** complex permeability where applicable, susceptibility, anisotropy, saturation magnetization, coercivity, remanence, magnetic resonance, and frequency-dependent magnetic loss.
+- **Electrical transport:** electrical conductivity and resistivity, anisotropy, dielectric response, permittivity, impedance, charge transport, and breakdown strength.
+- **Electronic structure:** band structure, band gap, density of states, Fermi level, carrier concentration, effective masses, and mobility where the selected method can support them.
+- **Insulating / semiconducting / conducting behavior:** derived classifications based on explicitly reported electronic and transport evidence. The software must not apply one universal band-gap or conductivity threshold to every material, temperature, frequency, or measurement geometry.
+
+The same candidate may be evaluated in several domains. For example, an optical resonator may also be conductive and magnetically active; a dielectric photonic crystal may instead rely on low-loss insulating constituents. The model must preserve each property, its units, conditions, spectral range, method, and uncertainty rather than compressing all results into a single label.
+
+Some quantities are frequency-dependent and complex-valued. Future result schemas must therefore support real and imaginary components as functions of frequency, tensor/an-isotropic response, temperature dependence, and uncertainty. DC conductivity, AC conductivity, dielectric loss, and optical absorption are related but are not interchangeable.
 
 ## Distinguish the physical mechanisms
 
@@ -21,6 +35,12 @@ The discovery engine must not treat every engineered optical material as the sam
 A negative effective refractive index, epsilon, or mu is a possible target in some frequency ranges, not a universal definition or a guaranteed outcome.
 
 ## Design representation
+
+Each design and each property target should retain:
+
+- Property domain (optical, magnetic, electrical, electronic structure, or coupled multiphysics), metric name, target relation, numerical target/range, and unit.
+- Optional spectral band for frequency-dependent objectives.
+- Explicit distinction between desired targets and computed property results.
 
 Each design should retain:
 
@@ -87,6 +107,6 @@ A visually plausible unit cell or a single simulation snapshot is not proof of a
 
 ## Current implementation status
 
-Implemented: immutable records for unit-cell dimensions, 2D/3D lattice periods, mechanism classification, wavelength bands, target-property labels, operating conditions, evidence, and limitations.
+Implemented: immutable records for unit-cell dimensions, 2D/3D lattice periods, mechanism classification, wavelength bands, generic typed targets spanning optical, magnetic, electrical, and electronic-structure domains, operating conditions, evidence, and limitations. Typed targets support minimize/maximize/approach/range objectives and optional spectral intervals.
 
-Not implemented: geometry generators, material dispersion database, electromagnetic solver adapters, homogenization/retrieval, inverse optimizer, fabrication constraints, and experimental-data ingestion.
+Not implemented: frequency-dependent complex/tensor property result models, electronic/transport/magnetic calculation adapters, geometry generators, material dispersion database, electromagnetic solver adapters, homogenization/retrieval, inverse optimizer, fabrication constraints, and experimental-data ingestion.
