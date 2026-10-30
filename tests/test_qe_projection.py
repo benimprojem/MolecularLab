@@ -320,7 +320,7 @@ def test_band_energy_spectrum_validation_detects_wrong_kpoint_spectrum():
     )
     mismatched = BandStructureData(
         kpoints=original.kpoints,
-        channels=(BandChannelData("non_spin_polarized", ((-1.0, -0.8), (1.1, 1.3))),),
+        channels=(BandChannelData("non_spin_polarized", ((-1.0, -0.8), (1.0, 1.3))),),
     )
     with pytest.raises(ValueError, match="spectra disagree at k-point 1"):
         validate_band_energy_spectra(original, mismatched)
