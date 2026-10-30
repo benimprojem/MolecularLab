@@ -6,10 +6,13 @@ Version: 0.1 | Rev.: 01
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from math import isfinite
 
-from molecular_lab.materials.electronic_structure import ProjectedDensityOfStatesData
+from molecular_lab.materials.electronic_structure import (
+    BandGapAssessment, BandGapStatus, BandStructureData,
+    ProjectedDensityOfStatesData, assess_band_gap,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -181,3 +184,57 @@ def summarize_pdos_window(
             ),
         ))
     return tuple(summaries)
+
+
+@dataclass(frozen=True, slots=True)
+class BandEdgePDOSAnalysis:
+    """PDOS contributions adjacent to sampled VBM and CBM energies."""
+    band_gap: BandGapAssessment
+    pdos_energy_shift_ev: float
+    vbm_window: tuple[PDOSWindowSummary, ...]
+    cbm_window: tuple[PDOSWindowSummary, ...]
+
+    def __post_init__(self):
+        if self.band_gap.status is not BandGapStatus.GAP:
+            raise ValueError("band-edge PDOS analysis requires a resolved band gap")
+        if not isfinite(self.pdos_energy_shift_ev):
+            raise ValueError("PDOS energy shift must be finite")
+        object.__setattr__(self, 'vbm_window', tuple(self.vbm_window))
+        object.__setattr__(self, 'cbm_window', tuple(self.cbm_window))
+
+
+def analyze_band_edge_pdos(
+    bands: BandStructureData,
+    pdos: ProjectedDensityOfStatesData,
+    *,
+    window_ev: float = 0.25,
+    pdos_energy_shift_ev: float = 0.0,
+    group_by: str = 'element',
+    gap_tolerance_ev: float = 1e-5,
+) -> BandEdgePDOSAnalysis:
+    """Correlate sampled VBM/CBM energies with element/orbital PDOS windows.
+
+    The shift is added to every PDOS energy to express it on the band-energy
+    reference. It is explicit by default: callers must ensure both datasets
+    use compatible structures, methods and energy references. The VBM window
+    lies below VBM; the CBM window lies above CBM. This is not k-resolved
+    orbital character.
+    """
+    if not isfinite(window_ev) or window_ev <= 0:
+        raise ValueError("window_ev must be finite and positive")
+    if not isfinite(pdos_energy_shift_ev):
+        raise ValueError("pdos_energy_shift_ev must be finite")
+    assessment = assess_band_gap(bands, gap_tolerance_ev=gap_tolerance_ev)
+    if assessment.status is not BandGapStatus.GAP:
+        raise ValueError(f'band-edge PDOS analysis requires a resolved gap; got {assessment.status.value}')
+    vbm = assessment.valence_band_maximum_ev
+    cbm = assessment.conduction_band_minimum_ev
+    if vbm is None or cbm is None:
+        raise ValueError("band assessment does not contain both band edges")
+    aligned = replace(pdos, energies_ev=tuple(e + pdos_energy_shift_ev for e in pdos.energies_ev))
+    return BandEdgePDOSAnalysis(
+        band_gap=assessment,
+        pdos_energy_shift_ev=pdos_energy_shift_ev,
+        vbm_window=summarize_pdos_window(aligned, vbm - window_ev, vbm, group_by=group_by),
+        cbm_window=summarize_pdos_window(aligned, cbm, cbm + window_ev, group_by=group_by),
+    )
