@@ -9,6 +9,7 @@ from molecular_lab.calculations.dft_settings import (
 from molecular_lab.calculations.quantum_espresso import (
     QuantumEspressoInputError, prepare_pw_input,
     prepare_qe_bands_postprocess_input, prepare_qe_dos_postprocess_input,
+    prepare_qe_projected_dos_postprocess_input,
 )
 from molecular_lab.structures.crystal import CrystalSite, CrystalStructure
 
@@ -210,3 +211,21 @@ def test_spin_and_temperature_warnings_are_explicit():
     assert "nspin = 2" in result.input_text
     assert any("starting magnetization" in warning for warning in result.warnings)
     assert any("finite-temperature" in warning for warning in result.warnings)
+
+
+
+def test_projected_dos_postprocess_deck_uses_projwfc_and_energy_grid():
+    request = settings(
+        task=DFTTask.DOS,
+        dos=DOSSettings(-6.0, 4.0, points=101, broadening_ev=0.04),
+        requested_outputs=(DFTOutput.PROJECTED_DOS,),
+    )
+    prepared = prepare_qe_projected_dos_postprocess_input(
+        request, pdos_prefix="nacl.pdos",
+    )
+    assert "&PROJWFC" in prepared.input_text
+    assert "filpdos = 'nacl.pdos'" in prepared.input_text
+    assert "Emin = -6" in prepared.input_text
+    assert "Emax = 4" in prepared.input_text
+    assert "DeltaE = 0.1" in prepared.input_text
+    assert "degauss" in prepared.input_text
