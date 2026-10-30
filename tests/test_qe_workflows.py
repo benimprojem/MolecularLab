@@ -113,7 +113,7 @@ def test_qe_dos_workflow_runs_scf_nscf_and_parses_output(tmp_path, monkeypatch):
             )
         return SimpleNamespace(
             returncode=0, stdout="JOB DONE.", stderr="",
-        )
+        ), None
 
     monkeypatch.setattr(execution, "_run_qe_input", run)
     result = execute_qe_dos(crystal(), dos_settings(), working_directory=tmp_path)
