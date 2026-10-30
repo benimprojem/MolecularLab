@@ -85,3 +85,15 @@ def test_findings_are_explanatory_and_nonempty():
     result = assess_composition(parse_formula("H2O"))
     assert len(result.findings) >= 2
     assert all(finding.rule_id and finding.message for finding in result.findings)
+
+
+def test_charged_single_element_is_not_assumed_to_be_neutral_elemental_state():
+    composition = Composition(counts={"O": 2}, net_charge=1)
+    result = assess_composition(composition)
+    assert result.oxidation_state_status == DiagnosticStatus.NOT_ASSESSED
+
+
+def test_missing_formal_balance_is_review_not_rejection():
+    result = assess_composition(parse_formula("LiF2"))
+    assert result.oxidation_state_status == DiagnosticStatus.NO_MATCH_IN_REFERENCE
+    assert result.requires_review
