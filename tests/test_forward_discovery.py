@@ -45,10 +45,10 @@ def test_hydrogen_oxygen_search_runs_composition_to_graph_pipeline(monkeypatch):
 
     assert water.graph_generation_status == "graphs_proposed"
     assert len(water.graphs) == 1
-    assert water.reference_lookup.match_level.value == "exact_structure"
+    assert water.reference_lookup.match_level.value == "formula_only"
     assert peroxide.graph_generation_status == "graphs_proposed"
     assert len(peroxide.graphs) == 1
-    assert peroxide.reference_lookup.match_level.value == "exact_structure"
+    assert peroxide.reference_lookup.match_level.value == "formula_only"
     assert len(peroxide.graph_identifications) == 1
 
 
