@@ -3,7 +3,7 @@ Restricted acyclic molecular graph proposal engines.
 
 Version: 0.1
 Rev.: 01
-Status: Acyclic, unicyclic, and bounded linear fused-acene graph prototypes.
+Status: Acyclic, unicyclic, and registered fused-benzenoid graph prototypes.
 
 The generators propose connectivity only. They do not establish geometry,
 energetics, stability, experimental existence, or synthesis feasibility.
@@ -22,7 +22,7 @@ _SUPPORTED_VALENCES = {"H": 1, "C": 4, "N": 3, "O": 2, "F": 1, "Cl": 1}
 _LIMITATIONS = (
     "Neutral species only; charged and radical states are not generated.",
     "Fixed common valences are used for H, C, N, O, F, and Cl only.",
-    "Acyclic, unicyclic, and linear fused-carbon acene skeletons are supported by separate generators; other fused, bridged, spiro, and general multi-ring systems remain outside scope.",
+    "Acyclic, unicyclic, and linear fused-carbon acene skeletons are supported by separate generators; unregistered fused layouts, bridged, spiro, and general multi-ring systems remain outside scope.",
     "Aromaticity is not an explicit graph bond type; optional RDKit perception is limited to supported Kekule graphs. General resonance enumeration, hypervalence, coordination chemistry, and variable valence are outside scope.",
     "A graph proposal is not a 3D geometry, stability result, or synthesis prediction.",
 )
@@ -591,7 +591,6 @@ def iter_fused_benzenoid_graphs(
         ))
 
     emitted = 0
-    examined_total = 0
     seen_topologies: set[tuple[tuple[int, int], ...]] = set()
     for layout_name, cells in layouts:
         edges, node_count = _fused_hexagon_topology(cells)
@@ -611,11 +610,8 @@ def iter_fused_benzenoid_graphs(
         if sum(attached_h) != hydrogen_count:
             continue
 
-        remaining_budget = max_assignments - examined_total
-        if remaining_budget <= 0:
-            return
         matching_iter = _perfect_matchings(
-            node_count, edges, max_assignments=remaining_budget
+            node_count, edges, max_assignments=max_assignments
         )
         for matching in matching_iter:
             matched = set(matching)
