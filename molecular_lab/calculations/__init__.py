@@ -22,6 +22,10 @@ from molecular_lab.calculations.gpaw import (
     GPAWInputError, GPAWUnavailableError, PreparedGPAWInput,
     build_optimization_target, create_gpaw_calculator, prepare_gpaw_input,
 )
+from molecular_lab.calculations.qe_output import (
+    QEOutputParseError, parse_qe_bands_gnu, parse_qe_fermi_level,
+    parse_qe_total_dos, read_qe_bands_gnu, read_qe_total_dos,
+)
 from molecular_lab.calculations.execution import (
     DFTExecutionResult, DFTExecutionStatus,
     execute_dft_calculation, execute_gpaw, execute_gpaw_scf,
@@ -38,6 +42,8 @@ __all__ = [
     "PreparedQEInput", "PreparedQEPostprocessInput", "QuantumEspressoInputError",
     "prepare_pw_input", "prepare_qe_bands_postprocess_input",
     "prepare_qe_dos_postprocess_input",
+    "QEOutputParseError", "parse_qe_bands_gnu", "parse_qe_fermi_level",
+    "parse_qe_total_dos", "read_qe_bands_gnu", "read_qe_total_dos",
     "GPAWInputError", "GPAWUnavailableError", "PreparedGPAWInput",
     "build_optimization_target", "create_gpaw_calculator", "prepare_gpaw_input",
     "DFTExecutionResult", "DFTExecutionStatus",
