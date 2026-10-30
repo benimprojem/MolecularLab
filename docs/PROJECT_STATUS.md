@@ -246,3 +246,22 @@ unrun.
   match the actual `DFTExecutionResult` fields used by the example.
 - Real QE execution remains pending until QE/ASE and the exact PBE Si UPF
   with its recommended cutoffs are available.
+
+
+## 12. QE BANDS preflight checks (2026-10-30)
+
+- Added a preflight before the prerequisite SCF stage in the QE BANDS workflow.
+- Checks structure/settings pseudopotential references, required UPF files in
+  the work directory, ASE discoverability, and executable resolution for
+  `pw.x` and `bands.x`; `projwfc.x` is checked only for fat-band requests.
+- Missing prerequisites return `BACKEND_UNAVAILABLE` with a list of issues.
+  SCF is not started when preflight fails.
+- Added tests for missing `projwfc.x` preventing SCF, missing UPF reporting,
+  and plain BANDS not requiring `projwfc.x`.
+- Updated `docs/QE_REFERENCE_VALIDATION.md` with the preflight contract.
+- Commits: `4f3aaa5` (preflight implementation),
+  `609c707` (ASE availability import),
+  `f5cdd0d` (tests), `edac31c` (documentation).
+- CI has not yet been confirmed for these commits. This preflight validates
+  discoverability and required files only; it does not validate runtime
+  compatibility, UPF contents, or scientific convergence.
