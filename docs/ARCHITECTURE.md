@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 14 | Status: SCF, fixed-cell RELAX and variable-cell VC_RELAX execution --> 
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 15 | Status: SCF, fixed-cell RELAX and variable-cell VC_RELAX execution --> 
 
 # System Architecture
 
@@ -86,3 +86,8 @@ Not implemented: variable-cell optimization; BANDS/DOS multi-stage workflows; st
 ## DFT execution and variable-cell relaxation (Rev. 14)
 
 The common execution layer dispatches SCF, fixed-cell ionic RELAX and variable-cell VC_RELAX requests to Quantum ESPRESSO or GPAW. Structural optimization returns a new crystal structure rather than mutating the source model. Stress results use a shared GPa, tension-positive convention. VC_RELAX requires explicit force and stress tolerances; QE maps the stress threshold to its native pressure convergence input, while GPAW uses ASE FrechetCellFilter and performs an independent final stress-residual check. See [DFT Execution](DFT_EXECUTION.md) for supported behavior and limitations.
+
+
+## Electronic band and DOS workflow preparation (Rev. 15)
+
+The backend-neutral settings now include structured reciprocal-space `BandPath` vertices and explicit total-DOS energy-window/sampling settings. The Quantum ESPRESSO adapter can generate a `pw.x` BANDS deck, a corresponding `bands.x` post-processing input, an NSCF deck for total DOS, and a `dos.x` post-processing input. The common execution API and output parsers do not yet execute or normalize BANDS/DOS results. GPAW BANDS/DOS execution is also not implemented. See [Quantum ESPRESSO](QUANTUM_ESPRESSO.md) and [Electronic Structure](ELECTRONIC_STRUCTURE.md).
