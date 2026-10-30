@@ -1,7 +1,8 @@
 import pytest
 
 from molecular_lab.calculations.dft_settings import (
-    ConvergenceSettings, DFTCalculationSettings, DFTOutput, DFTTask,
+    BandPath, BandPathPoint, DOSSettings, ConvergenceSettings,
+    DFTCalculationSettings, DFTOutput, DFTTask,
     EnergyCutoff, EnergyUnit, KPointMesh, KPointScheme, PseudopotentialReference,
     SmearingScheme, SmearingSettings,
 )
