@@ -183,7 +183,28 @@ Required:
 
 A value without a unit or a clear dimension must not be treated as a valid physical result. Vector, tensor, spectrum, and frequency-dependent values may require structured payloads rather than a single scalar.
 
-### 3.11 EvidenceRecord
+### 3.11 ReferenceMolecule
+
+A reference-molecule record represents a previously catalogued molecular identity.
+
+Required fields:
+- stable local `record_id`,
+- preferred name and molecular formula,
+- source database and source record identifier,
+- source URL and retrieval date,
+- structure identifier such as InChIKey when available.
+
+Optional fields:
+- synonyms,
+- canonical SMILES or other source-provided structure encodings,
+- CAS Registry Number,
+- source-specific annotations and licensing metadata.
+
+Formula is a composition key, not a unique structure key. Multiple isomers may share one formula. A formula match must therefore be reported separately from an exact structure match. Exact identity matching requires a standardized structure identifier (initially InChIKey); string equality of arbitrary SMILES is not sufficient unless both strings have been normalized by the same defined canonicalization procedure.
+
+A missing local match means only that the local catalogue has no matching record. It does not establish that a molecule is new or undiscovered.
+
+### 3.12 EvidenceRecord
 
 Required:
 - evidence category,
@@ -199,6 +220,7 @@ Evidence categories should distinguish experimental report, curated database, th
 - Different isomers or polymorphs must have distinct structural-alternative IDs.
 - A calculation result must identify the exact structure, state, method, and conditions used.
 - Imported records must preserve external identifiers and source provenance.
+- Reference-molecule matches must distinguish formula-only matches from exact structure identity.
 
 ## 5. Serialization and storage
 
@@ -237,6 +259,10 @@ The following decisions remain open until implementation and testing:
 - Persistent database technology.
 - Schema migration strategy.
 
-## 8. Implementation status
+## 8. Reference catalogue status
+
+An initial offline reference-molecule catalogue is implemented under `molecular_lab/database/`. It contains a small PubChem-derived seed set and supports formula and synonym lookup. Exact structure matching currently requires an input InChIKey. This is a seed catalogue, not a comprehensive chemical database.
+
+## 9. Implementation status
 
 This is a domain contract only. No runtime models, serializers, database tables, or validation routines are implemented by this document.
