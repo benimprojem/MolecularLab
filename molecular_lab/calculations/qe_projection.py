@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import re
+import math
 import xml.etree.ElementTree as ET
 
 from molecular_lab.calculations.dft_settings import BandPath
@@ -52,6 +53,25 @@ class QEAtomicProjectionCoefficient:
     imaginary: float
     weight: float
 
+    def __post_init__(self) -> None:
+        if isinstance(self.kpoint_index, bool) or not isinstance(self.kpoint_index, int) or self.kpoint_index < 0:
+            raise ValueError("kpoint_index must be a non-negative integer")
+        if isinstance(self.band_index, bool) or not isinstance(self.band_index, int) or self.band_index < 1:
+            raise ValueError("band_index must be a positive one-based integer")
+        if isinstance(self.atomic_wfc_index, bool) or not isinstance(self.atomic_wfc_index, int) or self.atomic_wfc_index < 1:
+            raise ValueError("atomic_wfc_index must be a positive one-based integer")
+        if not isinstance(self.spin_channel, str) or not self.spin_channel.strip():
+            raise ValueError("spin_channel cannot be empty")
+        if not all(isinstance(value, (int, float)) and not isinstance(value, bool)
+                   and math.isfinite(value)
+                   for value in (self.real, self.imaginary, self.weight)):
+            raise ValueError("projection coefficient values must be finite numbers")
+        if self.weight < 0:
+            raise ValueError("projection weight cannot be negative")
+        expected = self.real * self.real + self.imaginary * self.imaginary
+        if not math.isclose(self.weight, expected, rel_tol=1e-9, abs_tol=1e-12):
+            raise ValueError("projection weight must equal real² + imaginary²")
+
     @property
     def amplitude(self) -> complex:
         return complex(self.real, self.imaginary)
@@ -68,13 +88,53 @@ class QEAtomicProjectionData:
     format_generation: str
 
     def __post_init__(self) -> None:
-        if self.number_of_bands < 1 or self.number_of_kpoints < 1:
-            raise ValueError("band and k-point counts must be positive")
-        if not self.spin_channels:
-            raise ValueError("at least one spin channel is required")
-        indices = [item.index for item in self.atomic_wavefunctions]
-        if not indices or len(indices) != len(set(indices)):
-            raise ValueError("atomic wavefunction metadata must be non-empty and unique")
+        if (isinstance(self.number_of_bands, bool) or not isinstance(self.number_of_bands, int)
+                or isinstance(self.number_of_kpoints, bool) or not isinstance(self.number_of_kpoints, int)
+                or self.number_of_bands < 1 or self.number_of_kpoints < 1):
+            raise ValueError("band and k-point counts must be positive integers")
+        spins = tuple(self.spin_channels)
+        wavefunctions = tuple(self.atomic_wavefunctions)
+        coefficients = tuple(self.coefficients)
+        if not spins or len(spins) != len(set(spins)) or any(not spin.strip() for spin in spins):
+            raise ValueError("spin channels must be non-empty and unique")
+        indices = [item.index for item in wavefunctions]
+        if indices != list(range(1, len(wavefunctions) + 1)):
+            raise ValueError("atomic wavefunction indices must be contiguous and one-based")
+        atom_elements: dict[int, str] = {}
+        atom_wfcs: set[tuple[int, int]] = set()
+        for item in wavefunctions:
+            previous = atom_elements.setdefault(item.atom_index, item.element)
+            if previous != item.element:
+                raise ValueError(f"atom {item.atom_index} has conflicting element metadata")
+            atom_wfc = (item.atom_index, item.wavefunction_index)
+            if atom_wfc in atom_wfcs:
+                raise ValueError(f"duplicate wavefunction index for atom {item.atom_index}")
+            atom_wfcs.add(atom_wfc)
+        if sorted(atom_elements) != list(range(1, max(atom_elements) + 1)):
+            raise ValueError("atom indices in projector metadata must be contiguous and one-based")
+        expected = {
+            (k, spin, band, wfc)
+            for k in range(self.number_of_kpoints)
+            for spin in spins
+            for band in range(1, self.number_of_bands + 1)
+            for wfc in indices
+        }
+        observed = [
+            (item.kpoint_index, item.spin_channel, item.band_index, item.atomic_wfc_index)
+            for item in coefficients
+        ]
+        if len(observed) != len(set(observed)):
+            raise ValueError("duplicate projection coefficient for a state/projector key")
+        if set(observed) != expected:
+            missing = len(expected - set(observed))
+            extra = len(set(observed) - expected)
+            raise ValueError(
+                f"projection coefficient grid is incomplete or out of range "
+                f"({missing} missing, {extra} unexpected)"
+            )
+        object.__setattr__(self, "spin_channels", spins)
+        object.__setattr__(self, "atomic_wavefunctions", wavefunctions)
+        object.__setattr__(self, "coefficients", coefficients)
 
 
 _STATE_RE = re.compile(
