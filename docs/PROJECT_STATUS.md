@@ -265,3 +265,13 @@ unrun.
 - CI has not yet been confirmed for these commits. This preflight validates
   discoverability and required files only; it does not validate runtime
   compatibility, UPF contents, or scientific convergence.
+
+
+## 13. Fat-band internal consistency checks (2026-10-30)
+
+- Strengthened QE atomic projection validation: contiguous one-based projector metadata, contiguous atom indices, consistent element labels per atom, unique spin labels, and a complete unique spin × k-point × band × projector coefficient grid.
+- Each complex coefficient now checks finite real/imaginary/weight values, non-negative weight, and weight = real² + imaginary² within numerical tolerance.
+- Strengthened FatBandDataset validation: complete unique spin × k-point × band state grid, consistent atom/element identity, unique atom/orbital contribution keys and valid source-projector indices.
+- Added regression tests for inconsistent weights, NaN values, missing or duplicate coefficient keys, out-of-range state keys, duplicate fat-band states and duplicate orbital contributions.
+- Deliberately do not require projected weights to sum to one; incomplete projector bases and pseudopotential choices make that an invalid universal constraint. No automatic renormalization is introduced.
+- This is structural/data-integrity validation, not proof that QE physical projection basis is complete or that a real calculation has converged.
