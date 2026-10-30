@@ -250,3 +250,62 @@ def build_fatband_dataset(
             "Band energies and k-point coordinates come from BandStructureData.",
         ),
     )
+
+def validate_band_energy_spectra(
+    reference: BandStructureData,
+    comparison: BandStructureData,
+    *,
+    tolerance_ev: float = 1e-4,
+) -> None:
+    """Check per-k-point eigenvalue spectra without assuming band ordering.
+
+    QE's bands.x may reorder band indices to improve visual continuity, while
+    projwfc.x reports the original pw.x eigenstate order. Sorting energies
+    independently at each k-point permits a spectrum-level comparison without
+    pretending to recover state identity.
+    """
+    if not isfinite(tolerance_ev) or tolerance_ev < 0:
+        raise ValueError("tolerance_ev must be finite and non-negative")
+    if len(reference.kpoints) != len(comparison.kpoints):
+        raise ValueError("Band spectra have different k-point counts")
+    if len(reference.channels) != len(comparison.channels):
+        raise ValueError("Band spectra have different spin-channel counts")
+
+    aliases = {
+        "total": ("total", "non_spin_polarized"),
+        "non_spin_polarized": ("non_spin_polarized", "total"),
+        "spin_up": ("spin_up", "up"),
+        "up": ("up", "spin_up"),
+        "spin_down": ("spin_down", "down"),
+        "down": ("down", "spin_down"),
+    }
+    comparison_by_name = {channel.spin_channel: channel for channel in comparison.channels}
+    used: set[str] = set()
+    for reference_channel in reference.channels:
+        candidates = aliases.get(reference_channel.spin_channel, (reference_channel.spin_channel,))
+        name = next((item for item in candidates if item in comparison_by_name), None)
+        if name is None or name in used:
+            raise ValueError(
+                f"No unique matching spin channel for {reference_channel.spin_channel!r}"
+            )
+        used.add(name)
+        comparison_channel = comparison_by_name[name]
+        if reference_channel.band_count != comparison_channel.band_count:
+            raise ValueError(
+                f"Band count differs in spin channel {reference_channel.spin_channel!r}"
+            )
+        for kpoint_index in range(len(reference.kpoints)):
+            reference_energies = sorted(band[kpoint_index] for band in reference_channel.energies_ev)
+            comparison_energies = sorted(band[kpoint_index] for band in comparison_channel.energies_ev)
+            maximum_deviation = max(
+                (abs(left - right) for left, right in zip(reference_energies, comparison_energies)),
+                default=0.0,
+            )
+            if maximum_deviation > tolerance_ev:
+                raise ValueError(
+                    "Band eigenvalue spectra disagree at k-point "
+                    f"{kpoint_index} for spin {reference_channel.spin_channel!r}: "
+                    f"maximum deviation {maximum_deviation:.6g} eV exceeds "
+                    f"tolerance {tolerance_ev:.6g} eV"
+                )
+
