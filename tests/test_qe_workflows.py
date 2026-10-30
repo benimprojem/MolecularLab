@@ -79,6 +79,10 @@ def patch_scf(monkeypatch, result=None):
         execution, "prepare_qe_dos_postprocess_input",
         lambda *args, **kwargs: SimpleNamespace(input_text="dos post"),
     )
+    monkeypatch.setattr(
+        execution, "prepare_qe_projected_dos_postprocess_input",
+        lambda *args, **kwargs: SimpleNamespace(input_text="pdos post"),
+    )
 
 
 def test_qe_bands_workflow_runs_prerequisite_and_parses_output(tmp_path, monkeypatch):
@@ -147,3 +151,31 @@ def test_spin_polarized_bands_is_explicitly_rejected(tmp_path, monkeypatch):
     value = replace(value, spin_polarized=True)
     result = execute_qe_bands(crystal(), value, working_directory=tmp_path)
     assert result.status is DFTExecutionStatus.BACKEND_UNAVAILABLE
+
+
+
+def test_qe_projected_dos_workflow_runs_projwfc_and_returns_atom_orbitals(tmp_path, monkeypatch):
+    from dataclasses import replace
+    patch_scf(monkeypatch)
+    settings = replace(
+        dos_settings(),
+        requested_outputs=(DFTOutput.PROJECTED_DOS,),
+    )
+
+    def run(executable, input_text, *, workdir, **kwargs):
+        if executable == "projwfc.x":
+            (workdir / "molecular_lab.pdos.pdos_atm#1(Si)_wfc#1(p)").write_text(
+                "-1 1.0 0.2 0.3 0.5\\n0 1.2 0.4 0.5 0.6\\n",
+                encoding="utf-8",
+            )
+        return SimpleNamespace(returncode=0, stdout="JOB DONE.", stderr=""), None
+
+    monkeypatch.setattr(execution, "_run_qe_input", run)
+    result = execute_qe_dos(
+        crystal(), settings, working_directory=tmp_path,
+        projwfc_executable="projwfc.x",
+    )
+    assert result.status is DFTExecutionStatus.SUCCEEDED
+    assert result.density_of_states is None
+    assert result.projected_density_of_states.records[0].element == "Si"
+    assert result.projected_density_of_states.records[0].angular_momentum == 1
