@@ -689,8 +689,17 @@ def execute_qe_bands(
             total_energy_ev=scf_result.total_energy_ev,
             backend_version=scf_result.backend_version,
         )
+    if len(band_data.kpoints) != settings.band_path.sample_count:
+        return DFTExecutionResult(
+            "quantum_espresso", DFTExecutionStatus.FAILED,
+            f"BANDS output contains {len(band_data.kpoints)} k-points; "
+            f"the requested BandPath defines {settings.band_path.sample_count}.",
+            total_energy_ev=scf_result.total_energy_ev,
+            backend_version=scf_result.backend_version,
+        )
 
     fat_band_data = None
+    last_run = post_run
     if wants_fatband:
         projection_run, error = _run_qe_input(
             projwfc_executable, projection_input.input_text, workdir=workdir,
@@ -698,6 +707,7 @@ def execute_qe_bands(
         )
         if error is not None:
             return replace(error, message="BANDS workflow stopped at projwfc.x stage: " + error.message)
+        last_run = projection_run
         projection_xml = workdir / "tmp" / "molecular_lab.save" / "atomic_proj.xml"
         if not projection_xml.is_file():
             return DFTExecutionResult(
@@ -739,10 +749,12 @@ def execute_qe_bands(
         "QE SCF, BANDS and bands.x stages completed; band data were parsed."
             + (" Original-state projwfc.x projections were joined into fat-band data." if wants_fatband else ""),
         total_energy_ev=scf_result.total_energy_ev, converged=True,
-        return_code=post_run.returncode,
+        return_code=last_run.returncode,
         backend_version=scf_result.backend_version,
-        stdout=(scf_result.stdout or "") + (bands_run.stdout or "") + (post_run.stdout or ""),
-        stderr=(bands_run.stderr or "") + (post_run.stderr or ""),
+        stdout=(scf_result.stdout or "") + (bands_run.stdout or "") + (post_run.stdout or "")
+            + ((projection_run.stdout or "") if wants_fatband else ""),
+        stderr=(bands_run.stderr or "") + (post_run.stderr or "")
+            + ((projection_run.stderr or "") if wants_fatband else ""),
         band_structure=band_data,
         fat_band_structure=fat_band_data,
     )
