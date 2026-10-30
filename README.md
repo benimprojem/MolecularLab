@@ -1,7 +1,7 @@
 <!--
 Project: Molecular Lab
 Version: 0.1
-Rev.: 12
+Rev.: 13
 Status: Initial project foundation
 -->
 
@@ -38,8 +38,10 @@ A user may also provide a fixed formula, such as H₂O₂, and ask the applicati
 
 The user specifies desired properties and constraints. Possible targets include:
 
-- Optical transmission, reflection, absorption, or response over selected wavelength ranges.
-- Electrical behavior, conductivity class, and band gap.
+- Optical transmission, reflection, absorption, refractive index, phase, polarization, and response over selected wavelength ranges.
+- Magnetic response, permeability, susceptibility, anisotropy, resonance, and magnetic losses.
+- Electrical conductivity/resistivity, dielectric response, impedance, and breakdown behavior.
+- Electronic structure, band gap, density of states, carrier concentration, and semiconductor/insulator/conductor behavior (with conditions and classification criteria stated).
 - Mechanical properties such as hardness, brittleness, and elastic moduli.
 - Thermal and phase stability under specified temperature and pressure.
 - Defects, vacancies, substitutions, interstitials, dopants, and their concentrations.
@@ -135,7 +137,7 @@ MolecularLab/
 - [Molecular fragment model](docs/FRAGMENTS.md)
 - [Metamaterial discovery architecture](docs/METAMATERIALS.md)
 
-Metamaterials are treated as a separate periodic-geometry discovery domain. Molecular composition, crystal structure, and engineered unit-cell geometry are linked when useful but are not collapsed into one representation.
+Metamaterials are treated as a separate periodic-geometry and multiphysics discovery domain. Optical, magnetic, electrical-transport, and electronic-structure properties can be targeted together; molecular composition, crystal structure, and engineered unit-cell geometry remain separate but linkable representations. See [Metamaterial discovery architecture](docs/METAMATERIALS.md).
 
 ## 9. Development principles
 
@@ -163,7 +165,7 @@ Metamaterials are treated as a separate periodic-geometry discovery domain. Mole
 - [x] Integrate composition enumeration, diagnostics, reference lookup, graph proposals, and structure identification into one bounded forward-discovery workflow.
 - [x] Add registered fused-benzenoid graph prototypes for naphthalene, anthracene, phenanthrene, and bounded longer linear acenes (Kekulé representations; not a general fused-ring engine).
 - [x] Add foundational molecular fragment and attachment-port records (assembly engine remains planned).
-- [x] Add foundational metamaterial unit-cell and target-design records (electromagnetic simulation remains planned).
+- [x] Add foundational metamaterial unit-cell and typed optical, magnetic, electrical, and electronic-structure target records (calculation engines remain planned).
 - [ ] Expand structure generation and validation beyond the restricted prototype.
 - [ ] Add optional PubChem synchronization/import with rate limits, caching, and provenance retention.
 - [ ] Integrate the first calculation backend.
