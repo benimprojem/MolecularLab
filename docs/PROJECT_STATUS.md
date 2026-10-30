@@ -41,6 +41,7 @@ The repository is a research/prototype codebase. A feature being implemented or 
 | Band-edge / PDOS correlation | Implemented analysis helper | Energy-window summaries; not k-resolved band character |
 | QE k-resolved projection parser, fat-band data model and QE execution | Implemented prototype | Opt-in `DFTOutput.FAT_BAND_STRUCTURE`; synthetic workflow tests pass; real QE run still pending |
 | Fat-band plot-data preparation | Implemented prototype | Grouped series, reciprocal path distance, symmetry ticks, filters and display-only normalization |
+| Fat-band SVG renderer | Implemented prototype | Self-contained SVG; static output only, interactive UI not yet selected |
 | GPAW BANDS / DOS | Not implemented | Explicitly reported as unavailable |
 | Spin-polarized QE BANDS | Not implemented | Current BANDS runner rejects it |
 | Molecular electronic structure and spectra | Not implemented | Future work |
@@ -115,8 +116,8 @@ The conventional `band_structure` remains based on `bands.x`. Fat-band energies 
 - [x] Add plot-ready fat-band data export, grouping, filters and display-only normalization.
 - [x] Add a dependency-free static SVG renderer for fat-band plots.
 - [ ] Add an interactive desktop visualization component after selecting the UI framework.
-- [ ] Add atom, element and orbital filters to the visualization.
-- [ ] Add explicit display-only normalization options without modifying raw weights.
+- [x] Add atom, element and orbital filters to plot-data preparation.
+- [x] Add explicit display-only normalization options without modifying raw weights.
 - [ ] Revisit band-crossing continuity and state tracking with reference cases.
 - [ ] Add spin-polarized BANDS and spin-resolved fat bands.
 - [ ] Add GPAW BANDS / DOS / projection capabilities where the backend supports them.
@@ -136,14 +137,14 @@ The conventional `band_structure` remains based on `bands.x`. Fat-band energies 
 
 ## 7. Test and validation record
 
-Latest completed GitHub Actions run for the parser, execution integration, coordinate reconstruction and stale-output regression:
+Latest completed GitHub Actions run including the fat-band plot-data and SVG renderer tests:
 
-- RDKit-enabled suite: **274 passed, 1 skipped**.
-- Without RDKit: **269 passed, 6 skipped**.
-- Verified code commit: `bb38b9fde288bbbbebcc28ad5bdefaf76d594b88`.
-- Run: https://github.com/benimprojem/MolecularLab/actions/runs/41091007057
+- RDKit-enabled suite: **280 passed, 1 skipped**.
+- Without RDKit: test job **passed** (the latest no-RDKit count was not captured in this hand-off).
+- Verified code commit: `1e3c97ff68f80f0276757816300b16a2fa021f24`.
+- Run: https://github.com/benimprojem/MolecularLab/actions/runs/41091518752
 
-The QE fat-band parser/execution and plot-data tests are green. The SVG renderer test run passed on commit `1e3c97ff68f80f0276757816300b16a2fa021f24` (280 passed, 1 skipped with RDKit). This validates synthetic/mocked data only, not a real QE solver execution.
+The QE fat-band parser/execution, reciprocal path-distance calculation, grouping/filtering, display-only scaling and SVG renderer all pass synthetic/mocked tests. This does not constitute a real QE solver execution or scientific convergence validation.
 
 Validation levels must be recorded separately:
 
