@@ -45,3 +45,12 @@ Implement backend-specific capability declarations and input translators (initia
 ## Variable-cell convergence
 
 `ConvergenceSettings.stress_tolerance_gpa` is an explicit positive tolerance for variable-cell optimization. It is intentionally optional for other tasks and has no silently chosen default. The common VC_RELAX runner also requires an explicit atomic force tolerance. Backend adapters may implement different internal convergence algorithms; the common result reports the final stress tensor separately so that backend-specific stopping behavior is not hidden.
+
+
+## Band-path and DOS request settings
+
+- `BandPathPoint` stores fractional reciprocal coordinates, a display label, and the number of subdivisions to the next point. Every non-final point needs a positive subdivision count; the final point uses zero.
+- `BandPath` is an ordered sequence of at least two vertices. Only fractional crystal reciprocal coordinates are currently accepted.
+- `DOSSettings` requires an explicit minimum/maximum energy in eV, at least two grid points, and a positive broadening in eV.
+- A BANDS task requires either a structured path or a reference identifier at the settings level. QE input generation specifically requires the structured path; a reference alone is not enough to emit k-points.
+- A DOS task requires explicit `DOSSettings`. The QE input adapter maps the broadening width to Ry for `dos.x`.
