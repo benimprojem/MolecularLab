@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 03 -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 04 -->
 
 # Discovery Engine
 
@@ -15,7 +15,8 @@ Specify the forward and inverse candidate-search workflows and record the implem
 1. Validate element symbols and user constraints.
 2. Enumerate bounded compositions.
 3. Apply explainable composition-level diagnostics.
-4. Propose molecular graphs or crystal prototypes within explicitly stated model coverage.
+4. Query the local reference catalogue and, when enabled, external reference databases.
+5. Propose molecular graphs or crystal prototypes within explicitly stated model coverage.
 5. Enumerate relevant isomers, conformers, or structural variants.
 6. Build initial geometries.
 7. Optimize and validate structures using available backends.
@@ -46,7 +47,21 @@ Enumeration is not chemical validation. A composition is not automatically a mol
 
 Electron parity is useful for later spin-state enumeration but is not a stability test. A matching formal oxidation-state assignment is not proof of bonding or existence. Failure to find a match is not a universal impossibility rule and triggers review rather than automatic rejection.
 
-### 2.4 Molecular graph records — implemented
+### 2.4 Reference-molecule lookup — implemented
+
+The initial offline catalogue is stored in `molecular_lab/database/reference_molecules.json` and accessed through `molecular_lab/database/reference_molecules.py`.
+
+The seed catalogue contains five PubChem-derived records: water, hydrogen peroxide, methane, ethanol, and dimethyl ether. Lookup is available by formula and preferred name/synonym. Each record retains its PubChem CID, source URL, retrieval date, formula, canonical SMILES, InChIKey, and selected external identifiers.
+
+The lookup distinguishes three outcomes:
+
+- `EXACT_STRUCTURE`: an input InChIKey matches a reference record.
+- `FORMULA_ONLY`: one or more reference records have the same element counts, but exact structure identity is not established.
+- `NOT_FOUND`: the local catalogue contains no formula match.
+
+This distinction matters for isomers. Ethanol and dimethyl ether both have formula C2H6O, so formula alone cannot identify which structure was generated. A local `NOT_FOUND` result is not evidence of novelty; it only describes the current local catalogue. External PubChem synchronization/import is planned, not yet implemented.
+
+### 2.5 Molecular graph records — implemented
 
 The core domain layer now contains:
 
@@ -56,7 +71,7 @@ The core domain layer now contains:
 
 The graph record validates unique atom IDs, valid bond endpoints, and duplicate bonds. It does not validate chemistry, geometry, or stability by itself.
 
-### 2.5 Restricted molecular graph proposals — prototype implemented
+### 2.6 Restricted molecular graph proposals — prototype implemented
 
 `molecular_lab/engines/molecular_graphs.py` provides `iter_saturated_acyclic_graphs`.
 
@@ -99,6 +114,7 @@ Candidate records should distinguish experimental validation, database-supported
 
 Implemented:
 - Bounded, deterministic, lazy composition enumeration.
+- Offline reference-molecule seed catalogue with formula/name lookup and InChIKey identity matching.
 - Initial electron-count and formal oxidation-state diagnostics.
 - Backend-neutral molecular atom, bond, and graph records.
 - Restricted neutral saturated acyclic graph proposal prototype.
