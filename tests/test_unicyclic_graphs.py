@@ -97,6 +97,7 @@ def test_benzene_kekule_ring_is_generated():
     assert benzene_like
     assert all(
         sum(bond.order for bond in graph.bonds
-            if bond.atom_a == atom.atom_id or bond.atom_b == atom.atom_id) == 4
+            if bond.atom_a == atom.atom_id or bond.atom_b == atom.atom_id)
+        == (1 if atom.element == "H" else 4)
         for graph in benzene_like for atom in graph.atoms
     )
