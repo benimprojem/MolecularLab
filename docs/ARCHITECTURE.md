@@ -30,7 +30,7 @@ Define the boundaries and responsibilities of Molecular Lab modules. This docume
 
 The shared domain contract is specified in [DATA_MODEL.md](DATA_MODEL.md). Domain records remain independent of scientific backends. Adapters convert between Molecular Lab structures/settings and solver-specific inputs while preserving atom identity, units, conditions, and provenance.
 
-The common solver orchestration contract is implemented in `molecular_lab/engines/calculation_protocol.py`. Backend-neutral periodic DFT inputs are modeled in `molecular_lab/calculations/dft_settings.py`, independently of any particular solver:
+The common solver orchestration contract is implemented in `molecular_lab/engines/calculation_protocol.py`. Backend-neutral periodic DFT inputs are modeled in `molecular_lab/calculations/dft_settings.py`, independently of any particular solver. The optional `molecular_lab/calculations/ase_bridge.py` converts supported ordered crystal records to ASE Atoms without making ASE a core dependency:
 
 - `CalculationRequest` carries a request ID, physics domain, named method, scalar parameters, operating conditions, requested outputs, and optional structure reference.
 - `SolverCapability` declares a solver's supported domains, methods, and optional dependencies.
@@ -38,6 +38,7 @@ The common solver orchestration contract is implemented in `molecular_lab/engine
 - `SolverRegistry` registers adapters, lists availability, matches requests, and dispatches only to a compatible available adapter.
 - `CalculationResult` normalizes success/failure/unsupported/unavailable states and carries scalar outputs, frequency-dependent response datasets, spin-resolved band structures, and total/projected DOS records.
 - `DFTCalculationSettings` records the task, exchange-correlation identifier, plane-wave cutoff with units, k-point mesh, spin/SOC flags, optional smearing, convergence criteria, pseudopotential references, conditions, and requested outputs.
+- The optional ASE bridge preserves cell vectors, fractional positions, PBC flags, site metadata, and specified initial magnetic moments. Partial occupancy and defect annotations are rejected until explicit ordered structures are materialized.
 - Structure-aware DFT validation checks non-periodic k-point directions and exact element coverage by pseudopotential references. It does not check whether files exist or whether a solver supports the selected settings.
 
 The four initial domains are electronic structure, electrical transport, magnetic response, and electromagnetic response. This separation prevents accidental use of a solver outside its physical scope. A solver declaration is not evidence that the executable is installed, and an unavailable backend must never produce a fabricated result.
