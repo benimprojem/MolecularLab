@@ -33,7 +33,9 @@ from molecular_lab.materials.electronic_structure import (
 from molecular_lab.calculations.qe_projection import (
     parse_qe_atomic_proj_xml, parse_qe_projwfc_band_output,
 )
-from molecular_lab.calculations.fatband import FatBandDataset, build_fatband_dataset
+from molecular_lab.calculations.fatband import (
+    FatBandDataset, build_fatband_dataset, validate_band_energy_spectra,
+)
 from molecular_lab.structures.crystal import CrystalSite, CrystalStructure
 
 
@@ -805,7 +807,10 @@ def execute_qe_bands(
                 raise ValueError(
                     "projwfc.x and bands.x outputs contain different k-point counts"
                 )
-            fat_band_data = build_fatband_dataset(original_state_bands, projection_data, structure=structure)
+            validate_band_energy_spectra(original_state_bands, band_data)
+            fat_band_data = build_fatband_dataset(
+                original_state_bands, projection_data, structure=structure,
+            )
         except (OSError, ValueError) as exc:
             return DFTExecutionResult(
                 "quantum_espresso", DFTExecutionStatus.FAILED,
