@@ -79,3 +79,24 @@ def test_assignment_and_candidate_limits_are_validated():
         list(iter_unicyclic_graphs(parse_formula("C3H6"), max_assignments=0))
     with pytest.raises(ValueError, match="max_candidates"):
         list(iter_unicyclic_graphs(parse_formula("C3H6"), max_candidates=0))
+
+
+def test_benzene_kekule_ring_is_generated():
+    graphs = list(iter_unicyclic_graphs(parse_formula("C6H6"), max_candidates=20))
+    assert graphs
+    assert all(heavy_graph_cycle_rank(graph) == 1 for graph in graphs)
+    assert any(
+        Counter(atom.element for atom in graph.atoms) == Counter({"C": 6, "H": 6})
+        for graph in graphs
+    )
+    benzene_like = [
+        graph for graph in graphs
+        if sum(1 for bond in graph.bonds if bond.order == 2) == 3
+        and sum(1 for bond in graph.bonds if bond.order == 3) == 0
+    ]
+    assert benzene_like
+    assert all(
+        sum(bond.order for bond in graph.bonds
+            if bond.atom_a == atom.atom_id or bond.atom_b == atom.atom_id) == 4
+        for graph in benzene_like for atom in graph.atoms
+    )
