@@ -188,3 +188,70 @@ def test_parse_projwfc_stdout_rejects_incomplete_band_indices():
     """
     with pytest.raises(QEProjectionParseError, match="contiguous"):
         parse_qe_projwfc_band_output(output)
+
+
+def test_projection_data_rejects_inconsistent_weight_and_nonfinite_values():
+    from dataclasses import replace
+
+    xml = """<ATOMIC_PROJECTIONS>
+      <HEADER NUMBER_OF_BANDS="1" NUMBER_OF_K-POINTS="1"
+              NUMBER_OF_SPIN_COMPONENTS="1" NUMBER_OF_ATOMIC_WFC="3"/>
+      <EIGENSTATES><PROJS>
+        <ATOMIC_WFC index="1">0.5 0.0</ATOMIC_WFC>
+        <ATOMIC_WFC index="2">0.0 0.5</ATOMIC_WFC>
+        <ATOMIC_WFC index="3">0.1 0.2</ATOMIC_WFC>
+      </PROJS></EIGENSTATES>
+    </ATOMIC_PROJECTIONS>"""
+    data = parse_qe_atomic_proj_xml(xml, STATE_OUTPUT)
+    item = data.coefficients[0]
+    with pytest.raises(ValueError, match="real²"):
+        replace(item, weight=item.weight + 0.1)
+    with pytest.raises(ValueError, match="finite"):
+        replace(item, real=float("nan"))
+
+
+def test_projection_data_rejects_missing_duplicate_and_out_of_range_keys():
+    from dataclasses import replace
+
+    xml = """<ATOMIC_PROJECTIONS>
+      <HEADER NUMBER_OF_BANDS="1" NUMBER_OF_K-POINTS="1"
+              NUMBER_OF_SPIN_COMPONENTS="1" NUMBER_OF_ATOMIC_WFC="3"/>
+      <EIGENSTATES><PROJS>
+        <ATOMIC_WFC index="1">0.5 0.0</ATOMIC_WFC>
+        <ATOMIC_WFC index="2">0.0 0.5</ATOMIC_WFC>
+        <ATOMIC_WFC index="3">0.1 0.2</ATOMIC_WFC>
+      </PROJS></EIGENSTATES>
+    </ATOMIC_PROJECTIONS>"""
+    data = parse_qe_atomic_proj_xml(xml, STATE_OUTPUT)
+    with pytest.raises(ValueError, match="grid"):
+        replace(data, coefficients=data.coefficients[:-1])
+    with pytest.raises(ValueError, match="duplicate"):
+        replace(data, coefficients=data.coefficients + (data.coefficients[0],))
+    with pytest.raises(ValueError, match="grid"):
+        replace(data, coefficients=(replace(data.coefficients[0], band_index=2),) + data.coefficients[1:])
+
+
+def test_fatband_dataset_rejects_duplicate_state_and_orbital_records():
+    from dataclasses import replace
+
+    xml = """<ATOMIC_PROJECTIONS>
+      <HEADER NUMBER_OF_BANDS="1" NUMBER_OF_K-POINTS="1"
+              NUMBER_OF_SPIN_COMPONENTS="1" NUMBER_OF_ATOMIC_WFC="3"/>
+      <EIGENSTATES><PROJS>
+        <ATOMIC_WFC index="1">0.5 0.0</ATOMIC_WFC>
+        <ATOMIC_WFC index="2">0.0 0.5</ATOMIC_WFC>
+        <ATOMIC_WFC index="3">0.1 0.2</ATOMIC_WFC>
+      </PROJS></EIGENSTATES>
+    </ATOMIC_PROJECTIONS>"""
+    projections = parse_qe_atomic_proj_xml(xml, STATE_OUTPUT)
+    bands = BandStructureData(
+        kpoints=(KPoint((0.0, 0.0, 0.0), 1.0),),
+        channels=(BandChannelData("total", ((0.0,),)),),
+    )
+    dataset = build_fatband_dataset(bands, projections)
+    with pytest.raises(ValueError, match="duplicate state"):
+        replace(dataset, points=dataset.points + (dataset.points[0],))
+    point = dataset.points[0]
+    duplicate = replace(point, contributions=point.contributions + (point.contributions[0],))
+    with pytest.raises(ValueError, match="duplicate atom/orbital"):
+        replace(dataset, points=(duplicate,))
