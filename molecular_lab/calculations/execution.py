@@ -1,8 +1,8 @@
 """Explicit execution and result normalization for periodic DFT backends.
 
 Input preparation is separate from execution. The runner supports SCF, fixed-cell
-ionic RELAX and variable-cell VC_RELAX for Quantum ESPRESSO and GPAW; BANDS and
-DOS remain separate future workflows.
+ionic RELAX and variable-cell VC_RELAX for Quantum ESPRESSO and GPAW, plus
+sequential QE BANDS and total-DOS workflows.
 """
 from __future__ import annotations
 
