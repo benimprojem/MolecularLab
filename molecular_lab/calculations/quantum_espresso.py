@@ -289,6 +289,38 @@ def prepare_pw_input(
 
 
 
+def prepare_qe_bands_postprocess_input(
+    settings: DFTCalculationSettings,
+    *,
+    prefix: str = "molecular_lab",
+    outdir: str = "./tmp",
+    output_file: str = "molecular_lab.bands",
+) -> PreparedQEDOSInput:
+    """Prepare bands.x input after a successful pw.x BANDS calculation."""
+    if settings.task is not DFTTask.BANDS or settings.band_path is None:
+        raise QuantumEspressoInputError("bands.x preparation requires a BANDS task with BandPath")
+    prefix = _token(prefix, "prefix")
+    if not output_file or any(c in output_file for c in ("\\n", "\\r", "'", "!")):
+        raise QuantumEspressoInputError("output_file must be a safe non-empty filename")
+    text = "\\n".join([
+        "&BANDS",
+        f"  prefix = '{prefix}'",
+        f"  outdir = {_quoted_path(outdir, 'outdir')}",
+        f"  filband = '{output_file}'",
+        "  lsym = .true.",
+        "/",
+        "",
+    ])
+    return PreparedQEDOSInput(
+        input_text=text,
+        required_saved_calculation=f"{outdir.rstrip('/')}/{prefix}.save",
+        warnings=(
+            "bands.x input assumes a completed pw.x BANDS calculation in the same prefix and outdir.",
+            "This helper prepares input only; it does not execute bands.x or parse its output.",
+        ),
+    )
+
+
 def prepare_qe_dos_postprocess_input(
     settings: DFTCalculationSettings,
     *,
@@ -316,6 +348,8 @@ def prepare_qe_dos_postprocess_input(
         f"  Emin = {_number(dos.energy_min_ev)}",
         f"  Emax = {_number(dos.energy_max_ev)}",
         f"  DeltaE = {_number(delta_ev)}",
+        f"  degauss = {_number(dos.broadening_ev / _RY_EV)}",
+        "  ngauss = 0",
         "/",
         "",
     ])
