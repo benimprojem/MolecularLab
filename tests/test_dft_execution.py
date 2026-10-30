@@ -1,4 +1,6 @@
 import subprocess
+import sys
+import types
 
 import pytest
 
@@ -6,9 +8,9 @@ from molecular_lab.calculations.dft_settings import (
     ConvergenceSettings, DFTCalculationSettings, DFTOutput, DFTTask, EnergyCutoff, EnergyUnit,
     KPointMesh, KPointScheme, PseudopotentialReference,
 )
-from molecular_lab.calculations import quantum_espresso as qe_module
+from molecular_lab.calculations import quantum_espresso as qe_module\nfrom molecular_lab.calculations import gpaw as gpaw_module
 from molecular_lab.calculations.execution import (
-    DFTExecutionStatus, execute_quantum_espresso_scf, execute_quantum_espresso, execute_dft_calculation,
+    DFTExecutionStatus, execute_quantum_espresso_scf, execute_quantum_espresso, execute_dft_calculation, execute_gpaw,
 )
 from molecular_lab.structures.crystal import CrystalSite, CrystalStructure
 
@@ -227,3 +229,58 @@ def test_scf_compatibility_wrapper_rejects_relax(tmp_path):
             make_settings(task=DFTTask.RELAX),
             working_directory=tmp_path,
         )
+
+
+
+def test_gpaw_relax_returns_optimized_structure_and_forces(monkeypatch):
+    class Cell:
+        array = ((5.6, 0.0, 0.0), (0.0, 5.6, 0.0), (0.0, 0.0, 5.6))
+
+    class FakeAtoms:
+        cell = Cell()
+        calc = None
+
+        def get_potential_energy(self):
+            return -4.5
+
+        def get_forces(self):
+            return ((0.001, 0.0, 0.0), (-0.001, 0.0, 0.0))
+
+        def get_scaled_positions(self, wrap=False):
+            assert wrap is False
+            return ((0.02, 0.0, 0.0), (0.48, 0.5, 0.5))
+
+    class FakeCalculator:
+        scf = types.SimpleNamespace(converged=True)
+
+    class FakeBFGS:
+        def __init__(self, atoms, logfile=None):
+            self.atoms = atoms
+            self.logfile = logfile
+
+        def run(self, fmax):
+            assert fmax == pytest.approx(0.025)
+            return True
+
+    fake_gpaw = types.ModuleType("gpaw")
+    fake_gpaw.__version__ = "test-gpaw"
+    fake_gpaw.GPAW = lambda **kwargs: FakeCalculator()
+    fake_gpaw.PW = lambda cutoff: ("PW", cutoff)
+    fake_ase_optimize = types.ModuleType("ase.optimize")
+    fake_ase_optimize.BFGS = FakeBFGS
+    monkeypatch.setitem(sys.modules, "gpaw", fake_gpaw)
+    monkeypatch.setitem(sys.modules, "ase.optimize", fake_ase_optimize)
+    monkeypatch.setattr(gpaw_module, "to_ase_atoms", lambda structure: FakeAtoms())
+
+    value = make_settings(
+        task=DFTTask.RELAX,
+        convergence=ConvergenceSettings(force_tolerance_ev_per_angstrom=0.025),
+        requested_outputs=(DFTOutput.TOTAL_ENERGY, DFTOutput.FORCES),
+    )
+    result = execute_gpaw(make_structure(), value)
+    assert result.status is DFTExecutionStatus.SUCCEEDED
+    assert result.backend_version == "test-gpaw"
+    assert result.total_energy_ev == pytest.approx(-4.5)
+    assert result.optimized_structure is not None
+    assert result.optimized_structure.sites[0].fractional_coordinates == (0.02, 0.0, 0.0)
+    assert result.forces_ev_per_angstrom[1] == (-0.001, 0.0, 0.0)
