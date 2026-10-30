@@ -264,6 +264,9 @@ def test_qe_fatband_workflow_fails_if_atomic_projection_xml_is_missing(tmp_path,
         bands_settings(),
         requested_outputs=(DFTOutput.BAND_STRUCTURE, DFTOutput.FAT_BAND_STRUCTURE),
     )
+    stale_dir = tmp_path / "tmp" / "molecular_lab.save"
+    stale_dir.mkdir(parents=True)
+    (stale_dir / "atomic_proj.xml").write_text("<stale/>", encoding="utf-8")
 
     def run(executable, input_text, *, workdir, **kwargs):
         if executable == "bands.x":
