@@ -99,15 +99,15 @@ The automated workflow tests mock `pw.x`, `dos.x` and `projwfc.x`; no real solve
 
 ## QE fat-band output
 
-For a BANDS task, include \`DFTOutput.FAT_BAND_STRUCTURE\` alongside the
-conventional \`DFTOutput.BAND_STRUCTURE\` output. The runner adds a
-\`projwfc.x\` stage after the normal \`bands.x\) processing and returns
-\`DFTExecutionResult.fat_band_structure\` as a \`FatBandDataset\).
+For a BANDS task, include `DFTOutput.FAT_BAND_STRUCTURE` alongside the
+conventional `DFTOutput.BAND_STRUCTURE` output. The runner adds a
+`projwfc.x` stage after the normal `bands.x` processing and returns
+`DFTExecutionResult.fat_band_structure` as a `FatBandDataset`.
 
-The conventional band result remains based on \`bands.x\`. Fat-band energies
-are read from the original eigenstate records in \`projwfc.x\) output so the
-raw atomic projection coefficients retain their original \`pw.x\) band identity.
-This avoids silently assigning weights to a band index that \`bands.x\) may
+The conventional band result remains based on `bands.x`. Fat-band energies
+are read from the original eigenstate records in `projwfc.x` output so the
+raw atomic projection coefficients retain their original `pw.x\) band identity.
+This avoids silently assigning weights to a band index that `bands.x` may
 have reordered near a crossing. The current implementation is non-spin-
 polarized and scalar-relativistic only. It has synthetic/mocked workflow tests;
 real QE validation remains outstanding.
