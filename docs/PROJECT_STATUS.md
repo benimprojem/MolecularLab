@@ -225,3 +225,24 @@ unrun.
 - These changes improve reproducibility and diagnostics; they do not substitute
   for a real QE run. The solver execution and scientific convergence remain
   pending.
+
+
+## 11. Silicon example input validation (2026-10-30)
+
+- Tightened `build_silicon_band_path()` so its public helper rejects booleans
+  and non-integer subdivision values, not only zero/negative values.
+- Expanded the unit test to cover zero, negative, floating-point and boolean
+  inputs. This closes a small validation gap: the CLI already parsed this
+  argument as an integer, but direct Python callers could previously pass a
+  float despite the helper's documented positive-integer contract.
+- Commits: `65d9899586eae7f144ff5ad9d4f11e573fc7e1c2` (implementation) and
+  `640e8203186469b56bca9992d4dc418086e5ba1c` (tests).
+- CI for the earlier provenance/path/doc commits was still queued at the
+  beginning of this follow-up. The two new commits also require CI confirmation;
+  do not mark this change validated until their Actions runs complete.
+- The QE result object and example were cross-checked: `status`,
+  `message`, `backend_version`, `return_code`, `converged`,
+  `total_energy_ev`, `stdout`, `stderr` and `fat_band_structure`
+  match the actual `DFTExecutionResult` fields used by the example.
+- Real QE execution remains pending until QE/ASE and the exact PBE Si UPF
+  with its recommended cutoffs are available.
