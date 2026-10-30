@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 08 -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 09 -->
 
 # Discovery Engine
 
@@ -74,20 +74,21 @@ The graph record validates unique atom IDs, valid bond endpoints, and duplicate 
 
 ### 2.6 Restricted molecular graph proposals — prototype implemented
 
-`molecular_lab/engines/molecular_graphs.py` provides `iter_saturated_acyclic_graphs`.
+`molecular_lab/engines/molecular_graphs.py` provides both `iter_saturated_acyclic_graphs` (the original compatibility prototype) and `iter_acyclic_graphs` (the expanded bond-order-aware generator).
 
 The current prototype is intentionally restricted:
 
 - Neutral compositions only.
 - Supported elements: H, C, N, O, F, and Cl.
 - Fixed common valences: H(1), C(4), N(3), O(2), F(1), Cl(1).
-- Single bonds only.
+- Single, double, and triple bonds in the expanded generator.
 - Connected, acyclic heavy-atom skeletons; hydrogen atoms are added explicitly to fill remaining valences.
+- Configurable candidate, heavy-atom, and bond-order-assignment bounds.
 - A configurable heavy-atom bound and output candidate cap.
 
-The heavy-atom tree topologies are generated from Prüfer sequences. Equivalent assignments among identical element symbols are deduplicated within the canonicalization search bound. The prototype can propose familiar saturated structures such as H2O, H2O2, CH4, and C2H6O.
+The heavy-atom tree topologies are generated from Prüfer sequences. Equivalent assignments among identical element symbols are deduplicated within the canonicalization search bound. The expanded generator can propose saturated structures such as H2O, H2O2, CH4, and C2H6O, as well as simple unsaturated structures such as C2H4, C2H2, CH2O, and CO2 when they fit the fixed-valence tree model. Bond-order assignments are bounded by `max_assignments` to prevent uncontrolled combinatorial growth.
 
-This model does **not** cover double/triple bonds, aromatic systems, rings, charged species, radicals, hypervalent chemistry, coordination compounds, or elements outside the listed set. For example, C2H4 requires unsaturation and therefore produces no result here. That means “not generated within this prototype's scope,” not “chemically impossible.”
+This model does **not** cover aromatic systems, rings, charged species, radicals, hypervalent chemistry, coordination compounds, or elements outside the listed set. A composition that produces no graph means “not generated within this prototype's scope,” not “chemically impossible.”
 
 A proposed graph is only a connectivity hypothesis. It is not a 3D geometry, optimized structure, energy minimum, stability prediction, experimental observation, or synthesis guarantee.
 
@@ -149,7 +150,7 @@ The output includes compositions that have no graph proposal under the current p
 
 ## 3. Formula-based exploration
 
-When a fixed formula is supplied, the engine should preserve its atom counts and explore only structures consistent with those counts. As coverage expands, this will include connectivity, isomers, conformers, and geometries. Current graph proposals cover only the restricted saturated acyclic domain above.
+When a fixed formula is supplied, the engine should preserve its atom counts and explore only structures consistent with those counts. As coverage expands, this will include connectivity, isomers, conformers, and geometries. Current graph proposals cover only the restricted bond-order-aware acyclic domain above.
 
 ## 4. Inverse discovery
 
@@ -174,7 +175,7 @@ Implemented:
 - Offline reference-molecule seed catalogue with formula/name lookup and InChIKey identity matching.
 - Initial electron-count and formal oxidation-state diagnostics.
 - Backend-neutral molecular atom, bond, and graph records.
-- Restricted neutral saturated acyclic graph proposal prototype.
+- Restricted neutral saturated and bond-order-aware acyclic graph proposal prototypes.
 - Graph-to-catalogue identification adapter with optional RDKit canonical SMILES/InChIKey generation and formula-only fallback.
 - Integrated bounded forward molecular discovery pipeline combining enumeration, advisory diagnostics, catalogue lookup, graph proposals, and structure identification.
 
@@ -182,7 +183,7 @@ Not implemented:
 - General-purpose molecular graph generation beyond the stated prototype scope.
 - RDKit installation/configuration in a packaged application environment; the adapter is optional and lazy-loaded.
 - Periodic/crystal structure generation and periodic-only forward discovery.
-- Double/triple bond, ring, aromatic, radical, charged, hypervalent, or coordination graph generation.
+- Ring, aromatic, radical, charged, hypervalent, or coordination graph generation.
 - Crystal structure generation.
 - 3D geometry generation/optimization, stability assessment, or material-property calculations.
 
