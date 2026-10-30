@@ -80,3 +80,41 @@ def test_fused_acene_search_limit_is_validated():
         list(iter_linear_fused_acene_graphs(
             parse_formula("C10H8"), max_assignments=0
         ))
+
+
+def test_fused_benzenoid_templates_distinguish_anthracene_and_phenanthrene():
+    from molecular_lab.engines.molecular_graphs import iter_fused_benzenoid_graphs
+
+    graphs = list(iter_fused_benzenoid_graphs(parse_formula("C14H10")))
+    assert graphs
+    assert {graph.method.rsplit("_", 3)[0] for graph in graphs} >= {
+        "bounded_fused_benzenoid_anthracene",
+        "bounded_fused_benzenoid_phenanthrene",
+    }
+
+    for graph in graphs:
+        heavy_ids = {atom.atom_id for atom in graph.atoms if atom.element != "H"}
+        heavy_bonds = [
+            bond for bond in graph.bonds
+            if bond.atom_a in heavy_ids and bond.atom_b in heavy_ids
+        ]
+        assert len(heavy_bonds) - len(heavy_ids) + 1 == 3
+        assert sum(bond.order == 2 for bond in heavy_bonds) == 7
+
+
+def test_fused_benzenoid_generates_distinct_three_ring_structures_with_rdkit():
+    pytest.importorskip("rdkit")
+    from molecular_lab.engines.molecular_graphs import iter_fused_benzenoid_graphs
+
+    graphs = list(iter_fused_benzenoid_graphs(
+        parse_formula("C14H10"), max_candidates=100
+    ))
+    identified = [
+        identify_graph_against_catalogue(graph)
+        for graph in graphs
+    ]
+    aromatic = [
+        item for item in identified
+        if item.aromaticity_status == "aromatic_detected"
+    ]
+    assert len({item.inchi_key for item in aromatic if item.inchi_key}) >= 2
