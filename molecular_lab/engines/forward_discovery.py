@@ -2,7 +2,7 @@
 Integrated forward molecular discovery workflow.
 
 Version: 0.1
-Rev.: 00
+Rev.: 01
 Status: First end-to-end composition-to-graph pipeline.
 
 This workflow combines bounded composition enumeration, advisory diagnostics,
