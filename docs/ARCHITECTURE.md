@@ -50,4 +50,4 @@ The UI framework, persistence technology, job scheduler, exact backend interface
 
 ## Implementation status
 
-The initial offline reference-molecule catalogue and lookup functions are implemented under `molecular_lab/database/`. General persistence, external database synchronization, application orchestration, and scientific backend integration remain unimplemented.
+The initial offline reference-molecule catalogue and lookup functions are implemented under `molecular_lab/database/`. A graph-identification adapter under `molecular_lab/engines/` uses optional RDKit to derive canonical SMILES and InChIKeys before checking exact catalogue identity; without RDKit it performs formula-only matching. General persistence, external database synchronization, application orchestration, and scientific calculation backend integration remain unimplemented.
