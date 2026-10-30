@@ -11,6 +11,10 @@ from molecular_lab.calculations.qe_projection import (
 from molecular_lab.calculations.fatband import (
     FatBandContribution, FatBandDataset, FatBandPoint, build_fatband_dataset,
 )
+from molecular_lab.calculations.fatband_plot import (
+    FatBandPlotData, FatBandPlotPoint, FatBandPlotSeries, FatBandSymmetryTick,
+    prepare_fatband_plot_data,
+)
 
 from molecular_lab.calculations.pdos_analysis import (
     BandEdgePDOSAnalysis, PDOSWindowSummary, ProjectedDOSAggregate,
@@ -54,6 +58,8 @@ __all__ = [
     "QEProjectionParseError", "parse_qe_atomic_proj_xml", "read_qe_atomic_proj_xml",
     "parse_qe_projwfc_band_output",
     "FatBandContribution", "FatBandDataset", "FatBandPoint", "build_fatband_dataset",
+    "FatBandPlotData", "FatBandPlotPoint", "FatBandPlotSeries", "FatBandSymmetryTick",
+    "prepare_fatband_plot_data",
     "BandEdgePDOSAnalysis", "PDOSWindowSummary", "ProjectedDOSAggregate",
     "aggregate_projected_dos", "analyze_band_edge_pdos",
     "integrate_pdos_window", "summarize_pdos_window",
