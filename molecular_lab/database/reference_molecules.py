@@ -25,6 +25,7 @@ class MatchLevel(str, Enum):
     EXACT_STRUCTURE = "exact_structure"
     FORMULA_ONLY = "formula_only"
     NOT_FOUND = "not_found"
+    NOT_APPLICABLE = "not_applicable"
 
 
 @dataclass(frozen=True, slots=True)
