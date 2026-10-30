@@ -1,7 +1,7 @@
 <!--
 Project: Molecular Lab
 Version: 0.1
-Rev.: 01
+Rev.: 02
 Status: Initial project foundation
 -->
 
