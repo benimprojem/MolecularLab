@@ -9,7 +9,7 @@ Status: Initial project foundation
 
 **Molecular Lab** is a planned Windows desktop environment for exploring molecules, compounds, crystals, and functional materials through computational chemistry and materials-science workflows.
 
-> **Project status:** Early foundation only. This repository currently defines the project structure and intended scientific workflow. No molecular search, geometry optimization, stability assessment, or material-property calculation is implemented yet.
+> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, and a syntax-level chemical formula parser. Molecular search, structure generation, geometry optimization, stability assessment, and material-property calculations are not implemented yet.
 
 ## 1. Project goal
 
