@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 07 | Status: Initial architecture refinement -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 08 | Status: Initial architecture refinement -->
 
 # System Architecture
 
