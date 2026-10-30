@@ -1,0 +1,74 @@
+{
+  "schema_version": "0.1",
+  "data_version": "2026-10-30",
+  "project_version": "0.1",
+  "file_revision": "00",
+  "source_policy": "Seed records transcribed from PubChem Compound records. Each record retains its PubChem CID and source URL. Imported records must preserve source provenance and retrieval date.",
+  "molecules": [
+    {
+      "record_id": "pubchem-cid-962",
+      "preferred_name": "Water",
+      "formula": "H2O",
+      "synonyms": ["water", "oxidane", "dihydrogen oxide", "distilled water"],
+      "pubchem_cid": 962,
+      "canonical_smiles": "O",
+      "inchi_key": "XLYOFNOQVPJJNP-UHFFFAOYSA-N",
+      "cas_rn": "7732-18-5",
+      "source": "PubChem",
+      "source_url": "https://pubchem.ncbi.nlm.nih.gov/compound/962",
+      "retrieved_on": "2026-10-30"
+    },
+    {
+      "record_id": "pubchem-cid-784",
+      "preferred_name": "Hydrogen peroxide",
+      "formula": "H2O2",
+      "synonyms": ["hydrogen peroxide", "dioxidane", "perhydrol", "oxydol"],
+      "pubchem_cid": 784,
+      "canonical_smiles": "OO",
+      "inchi_key": "MHAJPDPJQMAIIY-UHFFFAOYSA-N",
+      "cas_rn": "7722-84-1",
+      "source": "PubChem",
+      "source_url": "https://pubchem.ncbi.nlm.nih.gov/compound/784",
+      "retrieved_on": "2026-10-30"
+    },
+    {
+      "record_id": "pubchem-cid-297",
+      "preferred_name": "Methane",
+      "formula": "CH4",
+      "synonyms": ["methane", "marsh gas", "methyl hydride", "fire damp"],
+      "pubchem_cid": 297,
+      "canonical_smiles": "C",
+      "inchi_key": "VNWKTOKETHGBQD-UHFFFAOYSA-N",
+      "cas_rn": "74-82-8",
+      "source": "PubChem",
+      "source_url": "https://pubchem.ncbi.nlm.nih.gov/compound/297",
+      "retrieved_on": "2026-10-30"
+    },
+    {
+      "record_id": "pubchem-cid-702",
+      "preferred_name": "Ethanol",
+      "formula": "C2H6O",
+      "synonyms": ["ethanol", "ethyl alcohol", "grain alcohol"],
+      "pubchem_cid": 702,
+      "canonical_smiles": "CCO",
+      "inchi_key": "LFQSCWFLJHTTHZ-UHFFFAOYSA-N",
+      "cas_rn": "64-17-5",
+      "source": "PubChem",
+      "source_url": "https://pubchem.ncbi.nlm.nih.gov/compound/702",
+      "retrieved_on": "2026-10-30"
+    },
+    {
+      "record_id": "pubchem-cid-8254",
+      "preferred_name": "Dimethyl ether",
+      "formula": "C2H6O",
+      "synonyms": ["dimethyl ether", "methoxymethane", "methyl ether", "dimethyl oxide"],
+      "pubchem_cid": 8254,
+      "canonical_smiles": "COC",
+      "inchi_key": "LCGLNKUTAGEVQW-UHFFFAOYSA-N",
+      "cas_rn": "115-10-6",
+      "source": "PubChem",
+      "source_url": "https://pubchem.ncbi.nlm.nih.gov/compound/8254",
+      "retrieved_on": "2026-10-30"
+    }
+  ]
+}
