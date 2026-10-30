@@ -264,8 +264,9 @@ def validate_band_energy_spectra(
     independently at each k-point permits a spectrum-level comparison without
     pretending to recover state identity.
     """
-    if not isfinite(tolerance_ev) or tolerance_ev < 0:
-        raise ValueError("tolerance_ev must be finite and non-negative")
+    if (isinstance(tolerance_ev, bool) or not isinstance(tolerance_ev, (int, float))
+            or not isfinite(tolerance_ev) or tolerance_ev < 0):
+        raise ValueError("tolerance_ev must be a finite non-negative number")
     if len(reference.kpoints) != len(comparison.kpoints):
         raise ValueError("Band spectra have different k-point counts")
     if len(reference.channels) != len(comparison.channels):
@@ -308,4 +309,79 @@ def validate_band_energy_spectra(
                     f"maximum deviation {maximum_deviation:.6g} eV exceeds "
                     f"tolerance {tolerance_ev:.6g} eV"
                 )
+
+@dataclass(frozen=True, slots=True)
+class FatBandProjectionWarning:
+    """Advisory about a suspicious raw projection-weight total or component."""
+
+    code: str
+    message: str
+    kpoint_index: int
+    band_index: int
+    spin_channel: str
+    observed_value: float
+    threshold: float
+
+    def __post_init__(self) -> None:
+        if not self.code.strip() or not self.message.strip() or not self.spin_channel.strip():
+            raise ValueError("projection warning code, message and spin channel are required")
+        if (isinstance(self.kpoint_index, bool) or not isinstance(self.kpoint_index, int)
+                or self.kpoint_index < 0 or isinstance(self.band_index, bool)
+                or not isinstance(self.band_index, int) or self.band_index < 1):
+            raise ValueError("projection warning state indices are invalid")
+        if not isfinite(self.observed_value) or not isfinite(self.threshold):
+            raise ValueError("projection warning values must be finite")
+
+
+def diagnose_fatband_projection_weights(
+    dataset: FatBandDataset,
+    *,
+    zero_weight_tolerance: float = 1e-12,
+    high_total_weight_threshold: float = 1.0,
+    high_contribution_weight_threshold: float = 1.0,
+) -> tuple[FatBandProjectionWarning, ...]:
+    """Return advisory warnings; thresholds are heuristics, not physical limits.
+
+    Raw projector weights are intentionally not normalized. Values above one
+    can occur with incomplete/non-orthogonal projector descriptions, so this
+    routine reports them for inspection and never rejects or rescales data.
+    """
+    thresholds = (
+        zero_weight_tolerance,
+        high_total_weight_threshold,
+        high_contribution_weight_threshold,
+    )
+    if any(
+        isinstance(value, bool) or not isinstance(value, (int, float))
+        or not isfinite(value) or value < 0
+        for value in thresholds
+    ):
+        raise ValueError("projection diagnostic thresholds must be finite non-negative numbers")
+
+    warnings: list[FatBandProjectionWarning] = []
+    for point in dataset.points:
+        total = point.total_projected_weight
+        state = (
+            point.kpoint_index, point.band_index, point.spin_channel,
+        )
+        if total <= zero_weight_tolerance:
+            warnings.append(FatBandProjectionWarning(
+                "zero_total_weight",
+                "No meaningful atomic-projector weight was recorded for this state.",
+                *state, total, zero_weight_tolerance,
+            ))
+        if total > high_total_weight_threshold:
+            warnings.append(FatBandProjectionWarning(
+                "high_total_weight",
+                "Total raw projector weight exceeds the advisory threshold; inspect projector overlap/completeness.",
+                *state, total, high_total_weight_threshold,
+            ))
+        for contribution in point.contributions:
+            if contribution.raw_weight > high_contribution_weight_threshold:
+                warnings.append(FatBandProjectionWarning(
+                    "high_orbital_weight",
+                    f"Atom {contribution.atom_index} {contribution.orbital_label} contribution exceeds the advisory threshold.",
+                    *state, contribution.raw_weight, high_contribution_weight_threshold,
+                ))
+    return tuple(warnings)
 
