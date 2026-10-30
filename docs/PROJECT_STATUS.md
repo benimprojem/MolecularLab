@@ -262,9 +262,10 @@ unrun.
 - Commits: `4f3aaa5` (preflight implementation),
   `609c707` (ASE availability import),
   `f5cdd0d` (tests), `edac31c` (documentation).
-- CI has not yet been confirmed for these commits. This preflight validates
-  discoverability and required files only; it does not validate runtime
-  compatibility, UPF contents, or scientific convergence.
+- At the time this section was first written, CI was still pending. The
+  subsequent validation records below document later successful full-suite
+  runs. This preflight validates discoverability and required files only; it
+  does not validate runtime compatibility, UPF contents, or scientific convergence.
 
 
 ## 13. Fat-band internal consistency checks (2026-10-30)
@@ -306,3 +307,19 @@ are available. Real QE execution and scientific convergence remain pending.
 
 
 **Projection-weight advisory diagnostics (2026-10-30):** Added `diagnose_fatband_projection_weights()` and immutable warning records. It flags near-zero total state weights, unusually high total raw weights and unusually high individual atom/orbital contributions. All thresholds are configurable; defaults are explicitly heuristic (1e-12 for near-zero and 1.0 for high values). Diagnostics do not reject, normalize or mutate raw projection data. Tests cover zero/high warnings and invalid thresholds.
+
+
+## 15. Fat-band self-diagnostics and cross-source checks (2026-10-30)
+
+- Added a per-k-point sorted eigenvalue-spectrum comparison between the original-state `projwfc.x` output and conventional `bands.x` output. It tolerates band reordering but rejects differing spectra, channel/band counts or k-point counts. Default tolerance: 1e-4 eV. This is not band state tracking.
+- Added advisory projection-weight diagnostics for effectively zero state totals, high state totals and high individual atom/orbital contributions. Thresholds are configurable and heuristic; raw values remain unchanged.
+- Exported `FatBandProjectionWarning`, `diagnose_fatband_projection_weights()` and `validate_band_energy_spectra()` from `molecular_lab.calculations`.
+- Tests cover reorder-safe matching, mismatch detection at the correct k-point, tolerance handling, dimensions, zero/high weight warnings and invalid diagnostic thresholds.
+- The spectrum mismatch regression test initially pointed to the wrong k-point because the fixture is stored as bands × k-points. The fixture was corrected; the code comparison itself identified the actual first mismatch as designed.
+
+**CI confirmation:** Commit `15a4fc4838af3796acd8f7dc7a913c22110a8c1d` passed both GitHub Actions jobs:
+- RDKit enabled: **300 passed, 1 skipped**.
+- Without RDKit: **295 passed, 6 skipped**.
+- Run: https://github.com/benimprojem/MolecularLab/actions/runs/41113313608
+
+These are code-level tests using synthetic/mock data. Real QE execution, UPF compatibility, k-point raw-coordinate convention verification, band-crossing state tracking and convergence/reference validation remain open.
