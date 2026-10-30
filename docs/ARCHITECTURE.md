@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 16 | Status: SCF, fixed-cell RELAX and variable-cell VC_RELAX execution --> 
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 17 | Status: QE BANDS, total DOS and atom/orbital PDOS execution --> 
 
 # System Architecture
 
@@ -37,11 +37,11 @@ The common solver orchestration contract is implemented in `molecular_lab/engine
 - `CalculationResult` normalizes success/failure/unsupported/unavailable states and carries scalar outputs, frequency-dependent response datasets, spin-resolved band structures, and total/projected DOS records.
 - `DFTCalculationSettings` records the task, exchange-correlation identifier, plane-wave cutoff with units, k-point mesh, spin/SOC flags, optional smearing, convergence criteria, pseudopotential references, conditions, and requested outputs.
 - The optional ASE bridge preserves cell vectors, fractional positions, PBC flags, and site metadata. Partial occupancy and defect annotations are rejected until explicit ordered structures are materialized.
-- The Quantum ESPRESSO adapter generates `pw.x` input decks for SCF/RELAX/VC-RELAX. It does not launch QE during input preparation and rejects SOC, site-specific magnetic initialization, unsupported outputs, BANDS/DOS workflows, and unsupported k-point conventions.
+- The Quantum ESPRESSO adapter generates `pw.x`, `bands.x`, `dos.x`, and `projwfc.x` input decks. The common execution layer runs sequential QE BANDS, total-DOS and atom/orbital PDOS workflows. SOC, site-specific magnetic initialization, spin-polarized BANDS, and unsupported k-point conventions remain rejected.
 - The GPAW adapter prepares ASE Atoms and GPAW calculator parameters for SCF/RELAX/VC-RELAX, and can instantiate a calculator or ASE optimization target. GPAW uses local PAW setups; QE-style pseudopotential file references are deliberately not consumed.
 - The common explicit execution entry point is `execute_dft_calculation` in `molecular_lab/calculations/execution.py`. It dispatches to QE or GPAW for SCF and fixed-cell ionic RELAX. QE runs `pw.x` as a subprocess with a timeout and preflight checks for its executable and referenced UPF files. GPAW is invoked lazily through ASE's calculator API and uses ASE BFGS for ionic relaxation.
 - Successful SCF results contain total energy in eV. Successful RELAX results additionally contain a new optimized `CrystalStructure` and per-site forces in eV/angstrom. The input structure remains unchanged. QE RELAX is accepted only when the geometry convergence marker, normal job completion, final energy, final coordinates, and all final atomic forces are present. GPAW RELAX is accepted only when ASE's optimizer reaches the explicit force threshold.
-- RELAX currently requires 3D periodicity and an explicit force tolerance. Variable-cell optimization, stress normalization, BANDS/DOS, automatic MPI launch, scheduler integration, cancellation, and checkpoint/restart remain unsupported.
+- RELAX requires 3D periodicity and an explicit force tolerance. SCF/RELAX/VC_RELAX and stress normalization are implemented on the current supported QE/GPAW subsets. GPAW BANDS/DOS, QE spin-polarized BANDS, projected DOS j-resolved/k-resolved formats, automatic MPI launch, scheduler integration, cancellation, and checkpoint/restart remain unsupported.
 - The older `execute_quantum_espresso_scf` and `execute_gpaw_scf` functions remain as SCF-only compatibility wrappers. No job is launched during module import or input preparation.
 
 ## Periodic structure contract
@@ -96,3 +96,10 @@ The backend-neutral settings now include structured reciprocal-space `BandPath` 
 ## QE electronic post-processing execution (Rev. 16)
 
 The common execution result now optionally carries BandStructureData or DensityOfStatesData. The QE execution dispatcher supports sequential BANDS (pw.x SCF, pw.x bands path, bands.x, parse .gnu) and total DOS (pw.x SCF, pw.x NSCF, dos.x, parse DOS table). Each stage is gated on successful process completion; absent or malformed result files fail the workflow. QE band-path distance is explicitly marked as such rather than mislabeled as a 3D fractional k-vector. GPAW BANDS/DOS and spin-polarized BANDS are not yet supported. Tests mock external processes; no actual QE scientific calculation is implied.
+
+
+## QE projected density of states (Rev. 17)
+
+The common DFT result can now carry `ProjectedDensityOfStatesData` alongside total DOS. QE PDOS execution reuses the SCF and NSCF prerequisite stages and invokes `projwfc.x` when `DFTOutput.PROJECTED_DOS` is requested. The parser preserves atom index, element symbol, pseudopotential wavefunction index, angular momentum, spin channel, local orbital DOS, and each angular component.
+
+The current parser supports collinear scalar-relativistic s/p/d/f output files. It retains QE's component ordering and maps the documented p and d components to p_z/p_x/p_y and d_z2/d_zx/d_zy/d_x2-y2/d_xy labels. It does not reinterpret projections as unique observables: they depend on the atomic wavefunctions in the selected pseudopotentials. Fully relativistic j-resolved, k-resolved and non-collinear PDOS formats are not parsed. Workflow tests mock QE executables; no physical calculation is claimed.
