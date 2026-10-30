@@ -2,11 +2,11 @@
 Molecular Lab domain models.
 
 Version: 0.1
-Rev.: 00
-Status: Initial foundational data types; no chemistry calculations are implemented.
+Rev.: 01
+Status: Foundational composition, evidence, and molecular graph records.
 
 These models intentionally use the Python standard library only. They describe
-input and result records; they do not establish chemical validity or stability.
+input and result records; they do not establish chemical stability.
 """
 
 from __future__ import annotations
@@ -42,7 +42,6 @@ class EvidenceCategory(str, Enum):
 @dataclass(frozen=True, slots=True)
 class ElementRef:
     """Identity of a chemical element; properties are intentionally minimal."""
-
     atomic_number: int
     symbol: str
 
@@ -56,7 +55,6 @@ class ElementRef:
 @dataclass(frozen=True, slots=True)
 class IsotopeRef:
     """Specific isotope identified by atomic number and mass number."""
-
     atomic_number: int
     mass_number: int
 
@@ -69,13 +67,7 @@ class IsotopeRef:
 
 @dataclass(frozen=True, slots=True)
 class Composition:
-    """
-    Element-count representation.
-
-    Counts are keyed by canonical element symbols. Isotope-resolved composition
-    will be added as a separate representation when isotope workflows are built.
-    """
-
+    """Element-count representation; isotope resolution is a separate future model."""
     counts: Mapping[str, int]
     net_charge: int | None = 0
     kind: CompositionKind = CompositionKind.MOLECULAR
@@ -84,7 +76,6 @@ class Composition:
     def __post_init__(self) -> None:
         if not self.counts:
             raise ValueError("composition must contain at least one element")
-
         normalized: dict[str, int] = {}
         for symbol, count in self.counts.items():
             if not symbol or not symbol[0].isupper() or not symbol.isalpha():
@@ -92,14 +83,11 @@ class Composition:
             if isinstance(count, bool) or not isinstance(count, int) or count <= 0:
                 raise ValueError(f"count for {symbol} must be a positive integer")
             normalized[symbol] = count
-
         object.__setattr__(self, "counts", MappingProxyType(dict(sorted(normalized.items()))))
-
         if self.net_charge is not None and (
             isinstance(self.net_charge, bool) or not isinstance(self.net_charge, int)
         ):
             raise ValueError("net_charge must be an integer or None")
-
         if not isinstance(self.kind, CompositionKind):
             object.__setattr__(self, "kind", CompositionKind(self.kind))
 
@@ -109,9 +97,70 @@ class Composition:
 
 
 @dataclass(frozen=True, slots=True)
+class MolecularAtom:
+    """One explicitly represented atom in a proposed molecular graph."""
+    atom_id: int
+    element: str
+
+    def __post_init__(self) -> None:
+        if isinstance(self.atom_id, bool) or self.atom_id < 0:
+            raise ValueError("atom_id must be a non-negative integer")
+        if not self.element or not self.element[0].isupper() or not self.element.isalpha():
+            raise ValueError("element must be a canonical element-like symbol")
+
+
+@dataclass(frozen=True, slots=True)
+class MolecularBond:
+    """An undirected bond between two distinct atom IDs."""
+    atom_a: int
+    atom_b: int
+    order: int = 1
+
+    def __post_init__(self) -> None:
+        if self.atom_a == self.atom_b:
+            raise ValueError("a bond cannot connect an atom to itself")
+        if min(self.atom_a, self.atom_b) < 0:
+            raise ValueError("atom IDs must be non-negative")
+        if self.order not in (1, 2, 3):
+            raise ValueError("bond order must be 1, 2, or 3")
+        if self.atom_a > self.atom_b:
+            a, b = self.atom_b, self.atom_a
+            object.__setattr__(self, "atom_a", a)
+            object.__setattr__(self, "atom_b", b)
+
+
+@dataclass(frozen=True, slots=True)
+class MolecularGraph:
+    """Explicit connectivity proposal; geometry and stability are not implied."""
+    atoms: tuple[MolecularAtom, ...]
+    bonds: tuple[MolecularBond, ...]
+    method: str
+    limitations: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        atoms = tuple(self.atoms)
+        bonds = tuple(self.bonds)
+        object.__setattr__(self, "atoms", atoms)
+        object.__setattr__(self, "bonds", bonds)
+        if not self.method.strip():
+            raise ValueError("graph method cannot be empty")
+        ids = [atom.atom_id for atom in atoms]
+        if len(ids) != len(set(ids)):
+            raise ValueError("atom IDs must be unique")
+        known = set(ids)
+        seen: set[tuple[int, int]] = set()
+        for bond in bonds:
+            if bond.atom_a not in known or bond.atom_b not in known:
+                raise ValueError("bond references an unknown atom ID")
+            pair = (bond.atom_a, bond.atom_b)
+            if pair in seen:
+                raise ValueError("duplicate bond between the same atoms")
+            seen.add(pair)
+
+
+@dataclass(frozen=True, slots=True)
 class SearchConstraints:
     """Explicit bounds for a composition search; these are not chemistry rules."""
-
     allowed_elements: frozenset[str]
     max_total_atoms: int
     domain: SearchDomain = SearchDomain.MOLECULE
@@ -127,15 +176,12 @@ class SearchConstraints:
             if not symbol or not symbol[0].isupper() or not symbol.isalpha():
                 raise ValueError(f"invalid element symbol: {symbol!r}")
         object.__setattr__(self, "allowed_elements", elements)
-
         if self.min_total_atoms < 1:
             raise ValueError("min_total_atoms must be at least 1")
         if self.max_total_atoms < self.min_total_atoms:
             raise ValueError("max_total_atoms must be >= min_total_atoms")
-
         if not isinstance(self.domain, SearchDomain):
             object.__setattr__(self, "domain", SearchDomain(self.domain))
-
         limits: dict[str, int] = {}
         for symbol, maximum in self.per_element_max.items():
             if symbol not in elements:
@@ -144,7 +190,6 @@ class SearchConstraints:
                 raise ValueError(f"maximum count for {symbol} must be a positive integer")
             limits[symbol] = maximum
         object.__setattr__(self, "per_element_max", MappingProxyType(limits))
-
         if self.allowed_charges is not None:
             charges = tuple(self.allowed_charges)
             if any(isinstance(q, bool) or not isinstance(q, int) for q in charges):
@@ -163,10 +208,7 @@ class SearchConstraints:
             if symbol in self.per_element_max
         ):
             return False
-        if (
-            self.allowed_charges is not None
-            and composition.net_charge not in self.allowed_charges
-        ):
+        if self.allowed_charges is not None and composition.net_charge not in self.allowed_charges:
             return False
         return True
 
@@ -174,7 +216,6 @@ class SearchConstraints:
 @dataclass(frozen=True, slots=True)
 class PropertyValue:
     """A numeric property with an explicit unit and optional conditions."""
-
     name: str
     value: float
     unit: str
@@ -193,7 +234,6 @@ class PropertyValue:
 @dataclass(frozen=True, slots=True)
 class EvidenceRecord:
     """Provenance record; category does not itself encode confidence."""
-
     category: EvidenceCategory
     claim: str
     source: str
@@ -210,7 +250,6 @@ class EvidenceRecord:
 @dataclass(frozen=True, slots=True)
 class Candidate:
     """A composition-level discovery candidate with optional evidence."""
-
     candidate_id: str
     composition: Composition
     evidence: tuple[EvidenceRecord, ...] = ()
