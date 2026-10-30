@@ -1,7 +1,7 @@
 """Electronic-structure result records and conservative band-gap analysis.
 
 Schema and analysis only: this module does not run DFT or infer experimental truth.
-Version: 0.1 | Rev.: 00
+Version: 0.1 | Rev.: 01
 """
 from __future__ import annotations
 from dataclasses import dataclass
