@@ -175,7 +175,7 @@ def test_qe_projected_dos_workflow_runs_projwfc_and_returns_atom_orbitals(tmp_pa
         crystal(), settings, working_directory=tmp_path,
         projwfc_executable="projwfc.x",
     )
-    assert result.status is DFTExecutionStatus.SUCCEEDED
+    assert result.status is DFTExecutionStatus.SUCCEEDED, result.message
     assert result.density_of_states is None
     assert result.projected_density_of_states.records[0].element == "Si"
     assert result.projected_density_of_states.records[0].angular_momentum == 1
