@@ -10,6 +10,7 @@ from molecular_lab.calculations.quantum_espresso import (
     QuantumEspressoInputError, prepare_pw_input,
     prepare_qe_bands_postprocess_input, prepare_qe_dos_postprocess_input,
     prepare_qe_projected_dos_postprocess_input,
+    prepare_qe_fatband_projection_input,
 )
 from molecular_lab.structures.crystal import CrystalSite, CrystalStructure
 
@@ -229,3 +230,35 @@ def test_projected_dos_postprocess_deck_uses_projwfc_and_energy_grid():
     assert "Emax = 4" in prepared.input_text
     assert "DeltaE = 0.1" in prepared.input_text
     assert "degauss" in prepared.input_text
+
+
+def test_fatband_projection_input_uses_same_saved_bands_calculation():
+    path = BandPath((
+        BandPathPoint((0.0, 0.0, 0.0), "GAMMA", 1),
+        BandPathPoint((0.5, 0.0, 0.0), "X", 0),
+    ))
+    value = settings(
+        task=DFTTask.BANDS,
+        band_path=path,
+        requested_outputs=(DFTOutput.BAND_STRUCTURE, DFTOutput.FAT_BAND_STRUCTURE),
+    )
+    prepared = prepare_qe_fatband_projection_input(value)
+    assert "&PROJWFC" in prepared.input_text
+    assert "prefix = 'molecular_lab'" in prepared.input_text
+    assert "outdir = './tmp'" in prepared.input_text
+    assert "lsym = .false." in prepared.input_text
+    assert "kresolveddos" not in prepared.input_text
+    assert prepared.required_saved_calculation == "./tmp/molecular_lab.save"
+
+
+def test_fatband_projection_input_rejects_spin_polarized_for_now():
+    path = BandPath((
+        BandPathPoint((0.0, 0.0, 0.0), "GAMMA", 1),
+        BandPathPoint((0.5, 0.0, 0.0), "X", 0),
+    ))
+    value = settings(
+        task=DFTTask.BANDS, band_path=path, spin_polarized=True,
+        requested_outputs=(DFTOutput.FAT_BAND_STRUCTURE,),
+    )
+    with pytest.raises(QuantumEspressoInputError, match="non-spin-polarized"):
+        prepare_qe_fatband_projection_input(value)
