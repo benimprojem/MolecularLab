@@ -14,7 +14,7 @@ Implementation: `molecular_lab/calculations/dft_settings.py`.
 - **Brillouin-zone sampling:** three-dimensional integer mesh, Monkhorst-Pack or Gamma-centered scheme, and explicit shift.
 - **Spin:** collinear spin-polarized flag and a separate spin-orbit-coupling flag. SOC does not imply a magnetic state; non-collinear/spinor details remain backend-adapter concerns.
 - **Smearing:** optional explicit scheme and energy width. No automatic smearing choice is made.
-- **Convergence:** energy tolerance, optional force and density tolerances, and maximum SCF iterations.
+- **Convergence:** energy tolerance, optional force, density and stress tolerances, and maximum SCF iterations. Stress tolerance is expressed in GPa and is required for the common VC_RELAX execution path.
 - **Pseudopotential references:** element, file name, family, source, optional valence electron count, checksum, and license metadata.
 - **Outputs:** total energy, forces, stress, band structure, DOS, charge density, and magnetic moments.
 - **Conditions:** optional temperature and pressure metadata.
@@ -40,3 +40,8 @@ A successful SCF convergence is not proof of structural, thermodynamic, or kinet
 ## Next integration
 
 Implement backend-specific capability declarations and input translators (initial candidates: Quantum ESPRESSO and GPAW). The adapter must preserve units and provenance and return an explicit unsupported/unavailable status instead of silently substituting methods. Actual execution should only be enabled after dependency and pseudopotential availability checks.
+
+
+## Variable-cell convergence
+
+`ConvergenceSettings.stress_tolerance_gpa` is an explicit positive tolerance for variable-cell optimization. It is intentionally optional for other tasks and has no silently chosen default. The common VC_RELAX runner also requires an explicit atomic force tolerance. Backend adapters may implement different internal convergence algorithms; the common result reports the final stress tensor separately so that backend-specific stopping behavior is not hidden.
