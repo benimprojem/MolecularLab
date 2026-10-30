@@ -14,3 +14,5 @@ __all__ = [
     "EnergyCutoff", "EnergyUnit", "KPointMesh", "KPointScheme",
     "PseudopotentialReference", "SmearingScheme", "SmearingSettings",
 ]
+
+from molecular_lab.calculations.ase_bridge import ASEBridgeError, ASEUnavailableError, ASEUnsupportedStructureError, ase_availability, to_ase_atoms
