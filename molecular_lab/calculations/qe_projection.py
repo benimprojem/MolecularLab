@@ -10,6 +10,7 @@ from dataclasses import dataclass
 import re
 import xml.etree.ElementTree as ET
 
+from molecular_lab.calculations.dft_settings import BandPath
 from molecular_lab.materials.electronic_structure import (
     BandChannelData, BandStructureData, KPoint,
 )
@@ -303,13 +304,17 @@ def parse_qe_projwfc_band_output(
     fermi_level_ev: float | None = None,
     backend_version: str = "",
     exchange_correlation: str = "",
+    band_path: BandPath | None = None,
 ) -> BandStructureData:
     """Extract original k-point coordinates and eigenvalues from projwfc.x stdout.
 
     This intentionally avoids bands.x reordered eigenvalue curves: atomic
     projection coefficients are indexed by the original pw.x eigenstate order.
     Keeping energies from projwfc.x stdout preserves that state identity at
-    crossings. Only scalar, non-spin-polarized output is supported here.
+    crossings. When a BandPath is supplied, exact fractional path coordinates
+    are reconstructed from its vertices/subdivisions rather than assuming a
+    unit convention for QE's printed k-vector. Only scalar, non-spin-polarized
+    output is supported here.
     """
     number = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[EeDd][-+]?\d+)?"
     kpoint_re = re.compile(
@@ -326,13 +331,14 @@ def parse_qe_projwfc_band_output(
             "No reciprocal-space k-point records were found in projwfc.x output."
         )
 
-    kpoints: list[KPoint] = []
+    raw_kpoints: list[tuple[float, float, float]] = []
     band_rows: list[dict[int, float]] = []
     for index, match in enumerate(k_matches):
         coordinates = tuple(
             float(value.replace("D", "E").replace("d", "e"))
             for value in match.groups()
         )
+        raw_kpoints.append(coordinates)
         end = k_matches[index + 1].start() if index + 1 < len(k_matches) else len(output)
         block = output[match.end():end]
         energies: dict[int, float] = {}
@@ -353,8 +359,28 @@ def parse_qe_projwfc_band_output(
             raise QEProjectionParseError(
                 f"Band indices at k-point {index} are not a contiguous one-based sequence."
             )
-        kpoints.append(KPoint(coordinates, 1.0, "fractional"))
         band_rows.append(energies)
+
+    if band_path is not None:
+        path_coordinates: list[tuple[float, float, float]] = []
+        for index, start in enumerate(band_path.points[:-1]):
+            end = band_path.points[index + 1]
+            subdivisions = start.points_to_next
+            for step in range(subdivisions):
+                fraction = step / subdivisions
+                path_coordinates.append(tuple(
+                    start.coordinates[axis]
+                    + fraction * (end.coordinates[axis] - start.coordinates[axis])
+                    for axis in range(3)
+                ))
+        path_coordinates.append(band_path.points[-1].coordinates)
+        if len(path_coordinates) != len(raw_kpoints):
+            raise QEProjectionParseError(
+                f"BandPath defines {len(path_coordinates)} k-points but projwfc.x reports {len(raw_kpoints)}."
+            )
+        kpoints = tuple(KPoint(point, 1.0, "fractional") for point in path_coordinates)
+    else:
+        kpoints = tuple(KPoint(point, 1.0, "qe_output") for point in raw_kpoints)
 
     band_count = len(band_rows[0])
     if any(len(row) != band_count for row in band_rows):
@@ -366,7 +392,7 @@ def parse_qe_projwfc_band_output(
         for band in range(1, band_count + 1)
     )
     return BandStructureData(
-        kpoints=tuple(kpoints),
+        kpoints=kpoints,
         channels=(BandChannelData("total", energies_by_band),),
         fermi_level_ev=fermi_level_ev,
         method="Quantum ESPRESSO projwfc.x original eigenstate energies",
@@ -375,7 +401,11 @@ def parse_qe_projwfc_band_output(
         exchange_correlation=exchange_correlation,
         notes=(
             "Eigenvalues are taken from projwfc.x stdout to preserve the original pw.x state ordering.",
-            "K-point coordinates are fractional crystal reciprocal coordinates parsed from projwfc.x.",
+            (
+                "K-point coordinates are reconstructed in fractional crystal coordinates from the supplied BandPath."
+                if band_path is not None
+                else "K-point coordinates retain QE's printed representation; its unit convention is not inferred here."
+            ),
             "The conventional bands.x output may reorder bands; do not use its band indices for raw projection joins.",
         ),
     )
