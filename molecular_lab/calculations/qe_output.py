@@ -156,7 +156,6 @@ def parse_qe_projected_dos(
         raise QEOutputParseError("No QE projected-DOS files were supplied")
     parsed: list[ProjectedDOSRecord] = []
     reference_energies: tuple[float, ...] | None = None
-    expected_columns = None
     for filename, content in sorted(files.items()):
         basename = Path(filename).name
         if ".pdos_atm#" not in basename:
