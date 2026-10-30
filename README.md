@@ -113,6 +113,7 @@ MolecularLab/
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   ├── CHEMICAL_MODEL.md
+│   ├── DATA_MODEL.md
 │   ├── CALCULATIONS.md
 │   ├── DISCOVERY_ENGINE.md
 │   └── LIMITATIONS.md
