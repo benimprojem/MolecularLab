@@ -36,7 +36,7 @@ def bands_settings():
         kpoint_mesh=KPointMesh((6, 6, 6), KPointScheme.MONKHORST_PACK),
         pseudopotentials={"Si": pseudo()},
         band_path=BandPath((
-            BandPathPoint((0, 0, 0), "GAMMA", 10),
+            BandPathPoint((0, 0, 0), "GAMMA", 1),
             BandPathPoint((0.5, 0, 0), "X", 0),
         )),
         requested_outputs=(DFTOutput.BAND_STRUCTURE,),
