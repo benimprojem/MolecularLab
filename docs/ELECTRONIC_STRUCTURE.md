@@ -61,3 +61,7 @@ The decomposition depends on the pseudopotential atomic wavefunctions and projec
 The `analyze_band_edge_pdos` helper connects a sampled band-gap assessment to element/atom and orbital PDOS integrals in configurable windows below the VBM and above the CBM. It preserves spin and orbital channels. The PDOS energy-axis shift is explicit, and both windows must be covered by the PDOS grid.
 
 This is energy-resolved correlation, not k-resolved band character. It cannot tell which orbital forms a particular band at a particular k-point; that requires k-resolved band-projection output. Compatibility of structures, pseudopotentials, functionals and energy references remains the caller's responsibility.
+
+## K-resolved fat bands
+
+The k-resolved fat-band projection model is documented in [FAT_BANDS.md](FAT_BANDS.md). `qe_projection.py` parses the complex atomic-wavefunction coefficients from `atomic_proj.xml` and joins their one-based projector indices to the atom/orbital state definitions printed by `projwfc.x`. `fatband.py` joins the resulting weights to the matching `BandStructureData` by spin channel, band index, and k-point order. Raw weights are retained without forced normalization. This is separate from energy-resolved PDOS and requires projection and band data from the same saved QE calculation.
