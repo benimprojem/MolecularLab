@@ -157,6 +157,12 @@ Future tests should cover:
 - lattice-vector validity and fractional coordinates,
 - serialization/deserialization without loss of chemical identity.
 
-## 8. Implementation status
+## 8. Formula input syntax
+
+The initial parser accepts case-sensitive element symbols, positive integer subscripts, and nested round or square groups. Examples include `H2O`, `Fe2(SO4)3`, and `K4[Fe(CN)6]`.
+
+At this stage it does not parse charge suffixes, isotope notation, hydrate separators, leading coefficients, dot-disconnected mixtures, or fractional occupancies. Charge is supplied separately in the composition model. A successfully parsed formula is only a syntactically valid element-count expression; it is not evidence that the substance exists or is stable.
+
+## 9. Implementation status
 
 This specification is being established before implementation. No chemistry validation, composition enumeration, structure generation, or stability calculation is claimed to exist yet.
