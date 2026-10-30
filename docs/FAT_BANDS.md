@@ -56,8 +56,10 @@ The parser validates the complete spin × k-point × band × atomic-projector
 coefficient grid, unique one-based projector indices, finite complex amplitudes,
 and the identity weight = real² + imaginary². The dataset validates a complete
 and unique spin × k-point × band state grid, consistent atom/element labels and
-unique atom/orbital contribution keys. The builder validates the number of bands,
-k-points and spin channels. It joins by band index, k-point order and spin label; it does not match by approximate
+unique atom/orbital contribution keys. When the crystal structure is supplied
+to the builder, it also checks that QE atom indices cover every input site and
+that the element at each index matches the input site ordering. The builder
+validates the number of bands, k-points and spin channels. It joins by band index, k-point order and spin label; it does not match by approximate
 energy. The caller must ensure that `atomic_proj.xml` and the supplied band
 structure originate from the same saved `pw.x` calculation and exactly the
 same k-point sequence. The projection XML coefficients alone do not provide
