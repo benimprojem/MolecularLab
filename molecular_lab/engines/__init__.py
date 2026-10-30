@@ -1,11 +1,12 @@
 """Forward and inverse discovery workflow engines.
 
-Version: 0.1 | Rev.: 03
+Version: 0.1 | Rev.: 04
 """
 
 from molecular_lab.engines.molecular_graphs import (
     iter_acyclic_graphs,
     iter_saturated_acyclic_graphs,
+    iter_unicyclic_graphs,
 )
 from molecular_lab.engines.forward_discovery import (
     ForwardDiscoveryResult,
@@ -23,6 +24,7 @@ __all__ = [
     "identify_graph_against_catalogue",
     "iter_acyclic_graphs",
     "iter_saturated_acyclic_graphs",
+    "iter_unicyclic_graphs",
     "iter_forward_discovery",
     "run_forward_discovery",
 ]
