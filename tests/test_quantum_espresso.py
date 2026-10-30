@@ -7,7 +7,8 @@ from molecular_lab.calculations.dft_settings import (
     PseudopotentialReference, SmearingScheme, SmearingSettings, ConvergenceSettings,
 )
 from molecular_lab.calculations.quantum_espresso import (
-    QuantumEspressoInputError, prepare_pw_input, prepare_qe_dos_postprocess_input,
+    QuantumEspressoInputError, prepare_pw_input,
+    prepare_qe_bands_postprocess_input, prepare_qe_dos_postprocess_input,
 )
 from molecular_lab.structures.crystal import CrystalSite, CrystalStructure
 
@@ -137,6 +138,9 @@ def test_bands_input_uses_explicit_crystal_b_path():
     assert "0 0 0 24" in deck
     assert "0.5 0 0 18" in deck
     assert "0.5 0.5 0 0" in deck
+    post = prepare_qe_bands_postprocess_input(value)
+    assert "&BANDS" in post.input_text
+    assert "filband = 'molecular_lab.bands'" in post.input_text
 
 
 def test_bands_reference_without_structured_path_is_not_enough_for_qe():
@@ -162,6 +166,7 @@ def test_dos_nscf_and_dos_x_inputs_are_prepared():
     assert "Emin = -10" in dos_input.input_text
     assert "Emax = 20" in dos_input.input_text
     assert "DeltaE = 0.05" in dos_input.input_text
+    assert "degauss = 0.00587989155" in dos_input.input_text
     assert dos_input.required_saved_calculation == "./tmp/molecular_lab.save"
 
 
