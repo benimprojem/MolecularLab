@@ -146,7 +146,7 @@ MolecularLab/
 - [x] Establish repository structure.
 - [x] Define the two discovery directions.
 - [x] Document the scientific scope and development principles.
-- [ ] Define shared data models and configuration.
+- [x] Define the initial shared domain data contract and foundational Python records.
 - [ ] Implement element and formula data handling.
 - [ ] Implement bounded candidate-composition generation.
 - [ ] Add structure generation and validation.
