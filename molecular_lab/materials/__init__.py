@@ -1,8 +1,12 @@
 """Material phases, defects, and physical-property models.
 
-Version: 0.1 | Rev.: 02
+Version: 0.1 | Rev.: 03
 """
 
+from molecular_lab.materials.electrical_classification import (
+    ElectricalBehavior, ElectricalBehaviorAssessment, ElectricalClassificationCriteria,
+    ElectricalMetric, assess_electrical_behavior,
+)
 from molecular_lab.materials.metamaterials import (
     MetamaterialDesign, MetamaterialMechanism, MetamaterialPropertyDomain,
     MetamaterialPropertyTarget, MetamaterialUnitCell, TargetRelation, UnitCellParameter,
@@ -13,8 +17,10 @@ from molecular_lab.materials.response import (
 )
 
 __all__ = [
-    "ComplexValue", "ConvergenceInfo", "ConvergenceStatus", "MaterialResponseDataset",
-    "MetamaterialDesign", "MetamaterialMechanism", "MetamaterialPropertyDomain",
-    "MetamaterialPropertyTarget", "MetamaterialUnitCell", "ResponseSample",
-    "SolverProvenance", "TargetRelation", "UnitCellParameter",
+    "ComplexValue", "ConvergenceInfo", "ConvergenceStatus", "ElectricalBehavior",
+    "ElectricalBehaviorAssessment", "ElectricalClassificationCriteria", "ElectricalMetric",
+    "MaterialResponseDataset", "MetamaterialDesign", "MetamaterialMechanism",
+    "MetamaterialPropertyDomain", "MetamaterialPropertyTarget", "MetamaterialUnitCell",
+    "ResponseSample", "SolverProvenance", "TargetRelation", "UnitCellParameter",
+    "assess_electrical_behavior",
 ]
