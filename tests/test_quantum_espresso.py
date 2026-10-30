@@ -103,11 +103,18 @@ def test_relax_maps_ionic_dynamics_and_force_threshold():
 
 
 def test_vc_relax_maps_pressure_gpa_to_kbar():
-    value = settings(task=DFTTask.VC_RELAX, pressure_gpa=1.5)
+    value = settings(
+        task=DFTTask.VC_RELAX, pressure_gpa=1.5,
+        convergence=ConvergenceSettings(
+            force_tolerance_ev_per_angstrom=0.03,
+            stress_tolerance_gpa=0.1,
+        ),
+    )
     deck = prepare_pw_input(crystal(), value).input_text
     assert "calculation = 'vc-relax'" in deck
     assert "cell_dynamics = 'bfgs'" in deck
     assert "press = 15" in deck
+    assert "press_conv_thr = 1" in deck
     assert "tstress = .true." in deck
 
 
