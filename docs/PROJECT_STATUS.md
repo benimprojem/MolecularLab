@@ -39,7 +39,7 @@ The repository is a research/prototype codebase. A feature being implemented or 
 | QE total DOS | Implemented prototype | SCF → NSCF → dos.x |
 | QE atom/orbital PDOS | Implemented prototype | SCF → NSCF → projwfc.x; collinear scalar-relativistic support |
 | Band-edge / PDOS correlation | Implemented analysis helper | Energy-window summaries; not k-resolved band character |
-| QE k-resolved projection parser and fat-band data model | Added; execution integration pending | Parser/model files exist; must be validated against real QE output |
+| QE k-resolved projection parser, fat-band data model and QE execution | Implemented prototype | Opt-in `DFTOutput.FAT_BAND_STRUCTURE`; synthetic workflow tests pass; real QE run still pending |
 | Fat-band visualization | Not implemented | Needs plot-ready series, filtering and visual component |
 | GPAW BANDS / DOS | Not implemented | Explicitly reported as unavailable |
 | Spin-polarized QE BANDS | Not implemented | Current BANDS runner rejects it |
@@ -53,26 +53,26 @@ The repository is a research/prototype codebase. A feature being implemented or 
 
 Files added:
 
-- \`molecular_lab/calculations/qe_projection.py\`
-  - Parses newer \`EIGENSTATES/PROJS/ATOMIC_WFC\` and legacy \`PROJECTIONS/K-POINT.N/(SPIN.N)/ATMWFC.N\` XML layouts.
-  - Retains complex projection coefficients and raw \`|c|²\` weights.
-  - Maps QE atomic-wavefunction indices to atom, element and angular-momentum metadata from \`projwfc.x\` standard output.
+- `molecular_lab/calculations/qe_projection.py`
+  - Parses newer `EIGENSTATES/PROJS/ATOMIC_WFC` and legacy `PROJECTIONS/K-POINT.N/(SPIN.N)/ATMWFC.N` XML layouts.
+  - Retains complex projection coefficients and raw `|c|²` weights.
+  - Maps QE atomic-wavefunction indices to atom, element and angular-momentum metadata from `projwfc.x` standard output.
   - Rejects unsupported spinor/four-component input explicitly.
 
-- \`molecular_lab/calculations/fatband.py\`
+- `molecular_lab/calculations/fatband.py`
   - Defines atom/orbital-resolved contributions and spin-resolved fat-band points/datasets.
   - Joins projections to band energies by k-point order, band index and spin.
   - Retains raw weights; it does not silently normalize them.
 
-- \`tests/test_qe_projection.py\`
+- `tests/test_qe_projection.py`
   - Covers new and legacy XML layouts, complex coefficients, spin channels, malformed inputs and band/projection joining.
 
-- \`docs/FAT_BANDS.md\`
+- `docs/FAT_BANDS.md`
   - Describes data sources, mathematical weights, index conventions and scientific limitations.
 
-Also updated \`molecular_lab/calculations/__init__.py\`, \`docs/ELECTRONIC_STRUCTURE.md\` and \`README.md\`.
+Also updated `molecular_lab/calculations/__init__.py`, `docs/ELECTRONIC_STRUCTURE.md` and `README.md`.
 
-**Validation status:** Files were confirmed present on GitHub. These new tests have not yet been confirmed by a GitHub Actions run or by a real QE calculation.
+**Validation status:** GitHub Actions passed for the parser and execution integration on commit `29812cc4ecf96c4ab75bfbadd93f4885b384ec36` (274 passed, 1 skipped with RDKit; 269 passed, 6 skipped without RDKit). A later defensive change to clear stale generated outputs is being re-tested. No real QE calculation has been run.
 
 ## 4. Important technical decisions and cautions
 
@@ -80,35 +80,37 @@ Also updated \`molecular_lab/calculations/__init__.py\`, \`docs/ELECTRONIC_STRUC
 - Projection weights are pseudopotential/projector-dependent quantities, not unique experimental observables.
 - Preserve raw projection weights. Any display normalization must be a separate derived value.
 - Projection and energy records must originate from the same saved QE calculation and identical k-point ordering.
-- Band crossings require care: \`bands.x\` may reorder eigenvalue curves. Do not blindly attach raw \`projwfc.x\` state weights to a reordered band index. Prefer the original QE eigenstate identity/energy sequence for the fat-band join, and keep the conventional \`.gnu\` band plot as a separate representation.
-- QE's \`atomic_proj.xml\` contains the per-state projection coefficients. The XML is written under the calculation save directory; \`lwrite_overlaps\` concerns optional overlap-matrix output and is not the switch that enables the projection coefficients.
+- Band crossings require care: `bands.x` may reorder eigenvalue curves. Do not blindly attach raw `projwfc.x` state weights to a reordered band index. Prefer the original QE eigenstate identity/energy sequence for the fat-band join, and keep the conventional `.gnu` band plot as a separate representation.
+- QE's `atomic_proj.xml` contains the per-state projection coefficients. The XML is written under the calculation save directory; `lwrite_overlaps` concerns optional overlap-matrix output and is not the switch that enables the projection coefficients.
 - The current parser handles scalar/collinear spin channels but explicitly does not implement non-collinear spinor projections or fully relativistic j-resolved metadata.
 - No automated test result should be described as a real QE run.
 
-## 5. Current milestone: QE fat-band execution pipeline
+## 5. Completed milestone: QE fat-band execution pipeline
 
-**Goal:** Make a single BANDS request optionally return both ordinary band data and atom/orbital-resolved fat-band data.
+**Goal achieved at prototype level:** A single BANDS request can return both conventional band data and atom/orbital-resolved fat-band data.
 
-Planned stages:
+Implemented sequence:
 
 1. Reuse the existing QE SCF stage.
-2. Run the existing \`pw.x\` BANDS calculation on the structured high-symmetry path.
-3. Run \`bands.x\` and parse the conventional \`.gnu\` result.
-4. Run \`projwfc.x\` on the same saved BANDS wavefunctions.
-5. Read \`atomic_proj.xml\` from the QE save directory.
-6. Parse the state metadata and original k-point/band eigenstate sequence from \`projwfc.x\` output.
-7. Build the \`FatBandDataset\` without confusing postprocessed band ordering with raw QE state identity.
-8. Return both datasets from the common DFT execution result.
-9. Add mocked integration tests for success, missing output, executable failure and state/k-point mismatch.
-10. Document the invocation and limitations.
+2. Run `pw.x` BANDS on the structured high-symmetry path.
+3. Run `bands.x` and parse the conventional `.gnu` result.
+4. Run `projwfc.x` on the same saved BANDS wavefunctions when `DFTOutput.FAT_BAND_STRUCTURE` is requested.
+5. Read `atomic_proj.xml` from `tmp/molecular_lab.save`.
+6. Parse the original QE eigenstate energies from `projwfc.x` output.
+7. Reconstruct fractional k-point coordinates from the exact input `BandPath`; do not infer units from QE's printed k-vector.
+8. Join raw projection weights to original eigenstate energies and return `DFTExecutionResult.fat_band_structure`.
+9. Reject mismatched band/k-point dimensions and missing projection XML.
+10. Clear stale `.gnu` and `atomic_proj.xml` outputs before rerunning stages, preventing accidental reuse of old calculation data.
 
-The current public settings model does not yet expose a fat-band output request. A dedicated \`DFTOutput.FAT_BAND_STRUCTURE\` output flag is the intended opt-in, while retaining the existing conventional band output.
+The conventional `band_structure` remains based on `bands.x`. Fat-band energies retain original `pw.x` state ordering so projection weights are not silently attached to reordered band indices at crossings.
+
+**Remaining validation:** The implementation has synthetic/mocked tests. Real QE execution, version-specific output validation and convergence checks remain outstanding.
 
 ## 6. Next milestones after fat-band execution
 
 ### Electronic-structure sequence
 
-- [ ] Complete and test QE fat-band execution integration.
+- [x] Complete QE fat-band execution integration with synthetic/mocked workflow tests.
 - [ ] Verify parser and workflow against a real QE version and a small reference crystal.
 - [ ] Add fat-band plot-ready data export and visualization.
 - [ ] Add atom, element and orbital filters to the visualization.
@@ -132,12 +134,14 @@ The current public settings model does not yet expose a fat-band output request.
 
 ## 7. Test and validation record
 
-The latest cross-conversation baseline before the newly added fat-band parser tests was reported as:
+Latest completed GitHub Actions run for the parser, execution integration and coordinate reconstruction:
 
-- RDKit-enabled suite: **259 passed, 1 skipped**.
-- Without RDKit: **254 passed, 6 skipped**.
+- RDKit-enabled suite: **274 passed, 1 skipped**.
+- Without RDKit: **269 passed, 6 skipped**.
+- Verified commit: `29812cc4ecf96c4ab75bfbadd93f4885b384ec36`.
+- Run: https://github.com/benimprojem/MolecularLab/actions/runs/41090895051
 
-These are historical baseline figures, not a verified result for the current HEAD after the fat-band commits. Re-run the full GitHub Actions matrix after the execution integration and update this section with the actual run URL, commit SHA, pass/skip counts and any failures.
+The subsequent stale-output cleanup and its regression test are newer than this green run; their CI result must be checked before treating the current HEAD as fully verified.
 
 Validation levels must be recorded separately:
 
@@ -152,8 +156,8 @@ Validation levels must be recorded separately:
 
 At the beginning of each new Molecular Lab conversation:
 
-1. Confirm the repository is \`benimprojem/MolecularLab\`.
-2. Read this \`docs/PROJECT_STATUS.md\` file from the current default branch.
+1. Confirm the repository is `benimprojem/MolecularLab`.
+2. Read this `docs/PROJECT_STATUS.md` file from the current default branch.
 3. Check the latest commits and relevant source/tests before editing.
 4. Continue only the active milestone unless the user explicitly changes workstream.
 5. Do not recreate files that already exist.
@@ -165,4 +169,4 @@ At the beginning of each new Molecular Lab conversation:
    - exact next step.
 7. Update the README only when the user-facing project capability/status materially changes.
 
-**Active hand-off point:** QE fat-band execution pipeline, beginning with integration into the existing \`execute_qe_bands\` workflow. Do not restart the chemical graph, crystal foundation or PDOS implementation from scratch.
+**Active hand-off point:** Fat-band visualization and plot-ready data export. Before starting, check the latest GitHub Actions result for stale-output cleanup commit(s), then continue from `DFTExecutionResult.fat_band_structure`. Do not restart the parser, execution pipeline, chemical graph, crystal foundation or PDOS implementation from scratch.
