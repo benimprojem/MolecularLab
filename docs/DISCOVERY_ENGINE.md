@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 07 -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 08 -->
 
 # Discovery Engine
 
@@ -53,7 +53,7 @@ The initial offline catalogue is stored in `molecular_lab/database/reference_mol
 
 The seed catalogue contains five PubChem-derived records: water, hydrogen peroxide, methane, ethanol, and dimethyl ether. Lookup is available by formula and preferred name/synonym. Each record retains its PubChem CID, source URL, retrieval date, formula, canonical SMILES, InChIKey, and selected external identifiers.
 
-The molecular lookup distinguishes three outcomes:
+The molecular lookup distinguishes these outcomes:
 
 - `EXACT_STRUCTURE`: an input InChIKey matches a reference record.
 - `FORMULA_ONLY`: one or more reference records have the same element counts, but exact structure identity is not established.
@@ -117,6 +117,35 @@ The workflow is bounded by `max_compositions`, `max_graphs_per_composition`, and
 Diagnostics are advisory and do not automatically reject compositions. A composition outside the graph prototype's scope remains visible with `no_graph_within_prototype_scope`; charged and formula-unit records are also retained with explicit statuses rather than being misreported as impossible. Periodic-only searches are rejected because crystal structure generation is not implemented.
 
 The pipeline does not yet create 3D coordinates, optimize geometry, calculate energies, assess thermodynamic/kinetic stability, or calculate material properties. Formula-level catalogue matches remain distinct from exact graph identity, which depends on successful structure-identifier generation. Formula-unit compositions are explicitly marked `NOT_APPLICABLE` for the molecule-only catalogue rather than being treated as unknown molecules.
+
+A minimal H/O search can be run as follows:
+
+```python
+from molecular_lab.core.models import SearchConstraints, SearchDomain
+from molecular_lab.engines.forward_discovery import iter_forward_discovery
+
+constraints = SearchConstraints(
+    allowed_elements=frozenset({"H", "O"}),
+    min_total_atoms=1,
+    max_total_atoms=4,
+    domain=SearchDomain.MOLECULE,
+)
+
+for result in iter_forward_discovery(
+    constraints,
+    required_elements={"H", "O"},
+    max_compositions=100,
+):
+    formula = result.composition.counts
+    print(
+        formula,
+        result.graph_generation_status,
+        result.reference_lookup.match_level.value,
+        len(result.graphs),
+    )
+```
+
+The output includes compositions that have no graph proposal under the current prototype. Consumers should inspect `graph_generation_note` and diagnostic findings rather than treating an empty graph list as a chemical impossibility. If RDKit is unavailable, graph identity remains formula-level.
 
 ## 3. Formula-based exploration
 
