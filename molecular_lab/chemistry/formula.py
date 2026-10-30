@@ -64,6 +64,8 @@ def parse_formula(formula: str) -> Composition:
                     f"Unexpected closing bracket {character!r} at position {index}"
                 )
             opener, group_counts = stack.pop()
+            if not group_counts:
+                raise FormulaParseError(f"Empty group ending at position {index}")
             if _OPEN_TO_CLOSE[opener] != character:
                 raise FormulaParseError(
                     f"Mismatched bracket {character!r} at position {index}"
