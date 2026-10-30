@@ -198,3 +198,12 @@ At the beginning of each new Molecular Lab conversation:
 a licensed, identified PBE silicon UPF; capture the solver version, UPF hash,
 cutoffs, k-mesh, output files and convergence evidence before marking the
 real-QE validation milestone complete.
+
+
+**CI update (2026-10-30):** The QE charge-density cutoff changes and the
+silicon example are covered by the latest successful GitHub Actions run:
+[run 41096358524](https://github.com/benimprojem/MolecularLab/actions/runs/41096358524),
+commit `436ad12b69ca5412b64c812d3a4ba875f26755f1`. Both RDKit-enabled and
+no-RDKit jobs passed. The new example test imports the script and verifies the
+primitive diamond silicon cell builder. The real QE solver itself remains
+unrun.
