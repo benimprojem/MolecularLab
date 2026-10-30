@@ -70,8 +70,9 @@ class FatBandDataset:
         kpoints = tuple(self.kpoints)
         spins = tuple(self.spin_channels)
         points = tuple(self.points)
-        if not kpoints or not spins or self.number_of_bands < 1:
-            raise ValueError("fat-band dataset requires k-points, spins, and bands")
+        if (not kpoints or not spins or isinstance(self.number_of_bands, bool)
+                or not isinstance(self.number_of_bands, int) or self.number_of_bands < 1):
+            raise ValueError("fat-band dataset requires k-points, spins, and a positive integer band count")
         if len(spins) != len(set(spins)) or any(not spin.strip() for spin in spins):
             raise ValueError("fat-band spin channels must be non-empty and unique")
         expected = {
