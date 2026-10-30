@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 05 -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 06 -->
 
 # Discovery Engine
 
@@ -100,6 +100,23 @@ RDKit is a lazy optional dependency. If it is not installed, or if the graph can
 
 This adapter inherits the graph generator's narrow chemical coverage. It does not make the graph generator universal, and a successful identifier match does not validate 3D geometry, stability, or synthesis feasibility.
 
+### 2.8 Integrated forward discovery pipeline — implemented
+
+`molecular_lab/engines/forward_discovery.py` composes the existing stages behind `iter_forward_discovery` and `run_forward_discovery`.
+
+For each bounded composition, the workflow:
+1. Runs advisory electron-count and formal oxidation-state diagnostics.
+2. Checks the local reference catalogue at formula level.
+3. For neutral molecular compositions, asks the restricted graph prototype for connectivity proposals.
+4. Runs each proposed graph through the optional structure-identification adapter.
+5. Returns one `ForwardDiscoveryResult` containing the composition, diagnostics, reference lookup, graphs, identifiers, and explicit graph-generation status.
+
+The workflow is bounded by `max_compositions`, `max_graphs_per_composition`, and `max_heavy_atoms`. It is lazy through `iter_forward_discovery`; `run_forward_discovery` materializes the bounded results as a tuple.
+
+Diagnostics are advisory and do not automatically reject compositions. A composition outside the graph prototype's scope remains visible with `no_graph_within_prototype_scope`; charged and formula-unit records are also retained with explicit statuses rather than being misreported as impossible. Periodic-only searches are rejected because crystal structure generation is not implemented.
+
+The pipeline does not yet create 3D coordinates, optimize geometry, calculate energies, assess thermodynamic/kinetic stability, or calculate material properties. Formula-level catalogue matches remain distinct from exact graph identity, which depends on successful structure-identifier generation.
+
 ## 3. Formula-based exploration
 
 When a fixed formula is supplied, the engine should preserve its atom counts and explore only structures consistent with those counts. As coverage expands, this will include connectivity, isomers, conformers, and geometries. Current graph proposals cover only the restricted saturated acyclic domain above.
@@ -129,10 +146,12 @@ Implemented:
 - Backend-neutral molecular atom, bond, and graph records.
 - Restricted neutral saturated acyclic graph proposal prototype.
 - Graph-to-catalogue identification adapter with optional RDKit canonical SMILES/InChIKey generation and formula-only fallback.
+- Integrated bounded forward molecular discovery pipeline combining enumeration, advisory diagnostics, catalogue lookup, graph proposals, and structure identification.
 
 Not implemented:
 - General-purpose molecular graph generation beyond the stated prototype scope.
 - RDKit installation/configuration in a packaged application environment; the adapter is optional and lazy-loaded.
+- Periodic/crystal structure generation and periodic-only forward discovery.
 - Double/triple bond, ring, aromatic, radical, charged, hypervalent, or coordination graph generation.
 - Crystal structure generation.
 - 3D geometry generation/optimization, stability assessment, or material-property calculations.
