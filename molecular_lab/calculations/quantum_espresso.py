@@ -190,6 +190,7 @@ def prepare_pw_input(
         f"  nat = {len(symbols)}",
         f"  ntyp = {len(species)}",
         f"  ecutwfc = {_number(cutoff_ry)}",
+        *([f"  ecutrho = {_number(settings.charge_density_cutoff.to(EnergyUnit.RYDBERG).value)}"] if settings.charge_density_cutoff is not None else []),
         f"  input_dft = '{xc}'",
     ]
     if structure.total_charge is not None:
