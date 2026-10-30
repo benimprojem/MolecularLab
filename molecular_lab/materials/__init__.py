@@ -1,6 +1,6 @@
 """Material phases, defects, and physical-property models.
 
-Version: 0.1 | Rev.: 03
+Version: 0.1 | Rev.: 04
 """
 
 from molecular_lab.materials.electronic_structure import (
