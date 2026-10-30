@@ -326,3 +326,6 @@ These are code-level tests using synthetic/mock data. Real QE execution, UPF com
 
 
 **Automatic Fat Band warning attachment (2026-10-30):** `build_fatband_dataset()` now runs the default advisory weight diagnostics and stores structured results in `FatBandDataset.projection_warnings`. Callers no longer need to remember to invoke the diagnostic helper to receive zero/high-weight warnings. Custom-threshold re-analysis remains available through `diagnose_fatband_projection_weights()`. Raw projection data are still unchanged.
+
+
+**Automatic warning attachment CI (2026-10-30):** Commit `566bfb790fce680a676c6b275fb45d884cb266e6` passed both jobs: RDKit enabled **301 passed, 1 skipped**; without RDKit **296 passed, 6 skipped**. Run: https://github.com/benimprojem/MolecularLab/actions/runs/41113643082. The zero-weight smoke test confirms warnings are attached to the returned `FatBandDataset` by default.
