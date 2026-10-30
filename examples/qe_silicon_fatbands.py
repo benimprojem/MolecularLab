@@ -180,7 +180,7 @@ def main() -> int:
         "logs": {"stdout": str(stdout_path), "stderr": str(stderr_path)},
     }
     manifest_path = results_dir / "run_manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     if not result.succeeded:
         raise RuntimeError(
@@ -213,7 +213,7 @@ def main() -> int:
         "stderr_log": str(stderr_path),
     }
     manifest_path.write_text(
-        json.dumps(manifest, indent=2, ensure_ascii=False) + "\\n",
+        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
 
