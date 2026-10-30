@@ -2,7 +2,7 @@
 Chemical formula parsing for ordinary element-count formulae.
 
 Version: 0.1
-Rev.: 00
+Rev.: 01
 Status: Initial parser; does not infer bonding, charge, phase, or stability.
 
 Supported:
