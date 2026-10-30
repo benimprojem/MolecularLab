@@ -407,3 +407,26 @@ def test_fatband_projection_diagnostics_validate_thresholds():
         diagnose_fatband_projection_weights(dataset, high_total_weight_threshold=float("nan"))
     with pytest.raises(ValueError, match="thresholds"):
         diagnose_fatband_projection_weights(dataset, zero_weight_tolerance=True)
+
+
+def test_fatband_builder_attaches_projection_warnings_automatically():
+    from molecular_lab.calculations.fatband import diagnose_fatband_projection_weights
+
+    xml = """<ATOMIC_PROJECTIONS>
+      <HEADER NUMBER_OF_BANDS="1" NUMBER_OF_K-POINTS="1"
+              NUMBER_OF_SPIN_COMPONENTS="1" NUMBER_OF_ATOMIC_WFC="3"/>
+      <EIGENSTATES><PROJS>
+        <ATOMIC_WFC index="1">0.0 0.0</ATOMIC_WFC>
+        <ATOMIC_WFC index="2">0.0 0.0</ATOMIC_WFC>
+        <ATOMIC_WFC index="3">0.0 0.0</ATOMIC_WFC>
+      </PROJS></EIGENSTATES>
+    </ATOMIC_PROJECTIONS>"""
+    projections = parse_qe_atomic_proj_xml(xml, STATE_OUTPUT)
+    bands = BandStructureData(
+        kpoints=(KPoint((0.0, 0.0, 0.0), 1.0),),
+        channels=(BandChannelData("total", ((0.0,),)),),
+    )
+    dataset = build_fatband_dataset(bands, projections)
+    assert len(dataset.projection_warnings) == 1
+    assert dataset.projection_warnings[0].code == "zero_total_weight"
+    assert dataset.projection_warnings == diagnose_fatband_projection_weights(dataset)
