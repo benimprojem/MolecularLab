@@ -74,9 +74,11 @@ def _canonical_signature(elements: tuple[str, ...], edges: tuple[tuple[int, int]
     group_permutations = [tuple(permutations(group)) for group in groups]
     for choices in product(*group_permutations):
         old_to_new: dict[int, int] = {}
+        offset = 0
         for group, ordered in zip(groups, choices):
-            for new_index, old_index in enumerate(ordered):
-                old_to_new[old_index] = new_index
+            for local_index, old_index in enumerate(ordered):
+                old_to_new[old_index] = offset + local_index
+            offset += len(group)
         # Rebuild element and attached-H arrays in canonical index order.
         new_elements = [""] * len(elements)
         new_hydrogens = [0] * len(elements)
