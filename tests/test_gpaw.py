@@ -76,6 +76,7 @@ def test_energy_cutoff_converts_to_ev():
 
 def test_smearing_and_convergence_are_mapped():
     result = prepare_gpaw_input(crystal(), settings(
+        task=DFTTask.RELAX,
         smearing=SmearingSettings(
             SmearingScheme.FERMI_DIRAC,
             EnergyCutoff(0.1, EnergyUnit.EV),
