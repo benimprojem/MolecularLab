@@ -323,3 +323,6 @@ are available. Real QE execution and scientific convergence remain pending.
 - Run: https://github.com/benimprojem/MolecularLab/actions/runs/41113313608
 
 These are code-level tests using synthetic/mock data. Real QE execution, UPF compatibility, k-point raw-coordinate convention verification, band-crossing state tracking and convergence/reference validation remain open.
+
+
+**Automatic Fat Band warning attachment (2026-10-30):** `build_fatband_dataset()` now runs the default advisory weight diagnostics and stores structured results in `FatBandDataset.projection_warnings`. Callers no longer need to remember to invoke the diagnostic helper to receive zero/high-weight warnings. Custom-threshold re-analysis remains available through `diagnose_fatband_projection_weights()`. Raw projection data are still unchanged.
