@@ -162,7 +162,12 @@ def test_parse_projwfc_stdout_preserves_original_band_order_and_fractional_kpoin
     ==== e(   1) = -1.10000 eV ====
     ==== e(   2) =  0.90000 eV ====
     """
-    data = parse_qe_projwfc_band_output(output, fermi_level_ev=0.0)
+    from molecular_lab.calculations.dft_settings import BandPath, BandPathPoint
+    path = BandPath((
+        BandPathPoint((0.0, 0.0, 0.0), "GAMMA", 1),
+        BandPathPoint((0.5, 0.0, 0.0), "X", 0),
+    ))
+    data = parse_qe_projwfc_band_output(output, fermi_level_ev=0.0, band_path=path)
     assert data.channels[0].spin_channel == "total"
     assert data.channels[0].energies_ev == (
         (-1.25, -1.1),
