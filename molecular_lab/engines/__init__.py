@@ -1,8 +1,17 @@
-"""Forward and inverse discovery workflow engines.
+"""Forward/inverse discovery and calculation orchestration engines.
 
-Version: 0.1 | Rev.: 04
+Version: 0.1 | Rev.: 05
 """
 
+from molecular_lab.engines.calculation_protocol import (
+    CalculationDomain,
+    CalculationRequest,
+    CalculationResult,
+    CalculationStatus,
+    SolverAvailability,
+    SolverCapability,
+    SolverRegistry,
+)
 from molecular_lab.engines.molecular_graphs import (
     iter_acyclic_graphs,
     iter_saturated_acyclic_graphs,
@@ -21,8 +30,15 @@ from molecular_lab.engines.structure_identification import (
 )
 
 __all__ = [
+    "CalculationDomain",
+    "CalculationRequest",
+    "CalculationResult",
+    "CalculationStatus",
     "ForwardDiscoveryResult",
     "GraphIdentificationResult",
+    "SolverAvailability",
+    "SolverCapability",
+    "SolverRegistry",
     "identify_graph_against_catalogue",
     "iter_acyclic_graphs",
     "iter_saturated_acyclic_graphs",
