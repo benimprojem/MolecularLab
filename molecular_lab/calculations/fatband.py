@@ -67,14 +67,48 @@ class FatBandDataset:
     notes: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
-        if not self.kpoints or not self.spin_channels or self.number_of_bands < 1:
+        kpoints = tuple(self.kpoints)
+        spins = tuple(self.spin_channels)
+        points = tuple(self.points)
+        if not kpoints or not spins or self.number_of_bands < 1:
             raise ValueError("fat-band dataset requires k-points, spins, and bands")
-        expected = len(self.kpoints) * len(self.spin_channels) * self.number_of_bands
-        if len(self.points) != expected:
-            raise ValueError(f"fat-band point count is {len(self.points)}; expected {expected}")
-        object.__setattr__(self, "kpoints", tuple(self.kpoints))
-        object.__setattr__(self, "spin_channels", tuple(self.spin_channels))
-        object.__setattr__(self, "points", tuple(self.points))
+        if len(spins) != len(set(spins)) or any(not spin.strip() for spin in spins):
+            raise ValueError("fat-band spin channels must be non-empty and unique")
+        expected = {
+            (k, spin, band)
+            for k in range(len(kpoints))
+            for spin in spins
+            for band in range(1, self.number_of_bands + 1)
+        }
+        observed = [(p.kpoint_index, p.spin_channel, p.band_index) for p in points]
+        if len(observed) != len(set(observed)):
+            raise ValueError("fat-band dataset contains duplicate state keys")
+        if set(observed) != expected:
+            raise ValueError("fat-band dataset state grid is incomplete or out of range")
+        atom_elements: dict[int, str] = {}
+        for point in points:
+            seen_contributions: set[tuple] = set()
+            for contribution in point.contributions:
+                previous = atom_elements.setdefault(contribution.atom_index, contribution.element)
+                if previous != contribution.element:
+                    raise ValueError(
+                        f"atom {contribution.atom_index} has conflicting element labels"
+                    )
+                key = (
+                    contribution.atom_index, contribution.angular_momentum,
+                    contribution.magnetic_number, contribution.total_angular_momentum,
+                )
+                if key in seen_contributions:
+                    raise ValueError("duplicate atom/orbital contribution in one fat-band state")
+                seen_contributions.add(key)
+                source_indices = contribution.source_wavefunction_indices
+                if (not source_indices or len(source_indices) != len(set(source_indices))
+                        or any(isinstance(index, bool) or not isinstance(index, int) or index < 1
+                               for index in source_indices)):
+                    raise ValueError("source wavefunction indices must be unique positive integers")
+        object.__setattr__(self, "kpoints", kpoints)
+        object.__setattr__(self, "spin_channels", spins)
+        object.__setattr__(self, "points", points)
         object.__setattr__(self, "notes", tuple(self.notes))
 
 
