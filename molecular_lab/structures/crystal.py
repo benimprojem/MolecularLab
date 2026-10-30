@@ -118,6 +118,15 @@ class CrystalStructure:
         if len(ids) != len(set(ids)):
             raise ValueError("crystal site IDs must be unique")
         known_ids = set(ids)
+        occupancy_by_position = {}
+        for site in sites:
+            key = tuple(
+                round(value % 1.0, 10) if pbc[index] else round(value, 10)
+                for index, value in enumerate(site.fractional_coordinates)
+            )
+            occupancy_by_position[key] = occupancy_by_position.get(key, 0.0) + site.occupancy
+        if any(total > 1.0 + 1e-8 for total in occupancy_by_position.values()):
+            raise ValueError("occupancies for species sharing one periodic site cannot sum above one")
         defect_ids = [defect.defect_id for defect in defects]
         if len(defect_ids) != len(set(defect_ids)):
             raise ValueError("defect IDs must be unique")
@@ -135,6 +144,15 @@ class CrystalStructure:
     def cell_volume_angstrom3(self):
         a, b, c = self.lattice_vectors_angstrom
         return (a[0]*(b[1]*c[2]-b[2]*c[1]) - a[1]*(b[0]*c[2]-b[2]*c[0]) + a[2]*(b[0]*c[1]-b[1]*c[0]))
+    @property
+    def cartesian_coordinates_angstrom(self):
+        """Cartesian coordinates in site order, using r = fractional @ lattice."""
+        lattice = self.lattice_vectors_angstrom
+        return tuple(
+            tuple(sum(site.fractional_coordinates[i] * lattice[i][j] for i in range(3)) for j in range(3))
+            for site in self.sites
+        )
+
     @property
     def composition_by_site(self):
         """Occupancy-weighted site counts, not a reduced empirical formula."""
