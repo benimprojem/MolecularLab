@@ -36,7 +36,7 @@ from molecular_lab.engines.composition_enumerator import iter_compositions
 from molecular_lab.engines.molecular_graphs import (
     iter_acyclic_graphs,
     iter_unicyclic_graphs,
-    iter_linear_fused_acene_graphs,
+    iter_fused_benzenoid_graphs,
 )
 from molecular_lab.engines.structure_identification import (
     GraphIdentificationResult,
@@ -143,7 +143,7 @@ def iter_forward_discovery(
                 max_heavy_atoms=max_heavy_atoms,
                 max_assignments=max_graph_assignments,
             )
-            fused_iter = iter_linear_fused_acene_graphs(
+            fused_iter = iter_fused_benzenoid_graphs(
                 composition,
                 max_candidates=max_graphs_per_composition,
                 max_heavy_atoms=max_heavy_atoms,
@@ -168,7 +168,7 @@ def iter_forward_discovery(
                 status = "graphs_proposed"
                 note = (
                     "Connectivity hypotheses were generated using the bounded "
-                    "acyclic, unicyclic, and bounded linear fused-acene graph models."
+                    "acyclic, unicyclic, and bounded fused-benzenoid graph models."
                 )
             else:
                 status = "no_graph_within_prototype_scope"
