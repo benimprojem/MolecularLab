@@ -22,7 +22,7 @@ Define the planned boundaries and responsibilities of Molecular Lab modules. Thi
 - `molecular_lab/calculations/`: calculation interfaces and backend adapters.
 - `molecular_lab/materials/`: phases, defects, optical, electrical, mechanical, and thermal properties.
 - `molecular_lab/engines/`: forward and inverse discovery workflows.
-- `molecular_lab/database/`: persistence and reference-data access.
+- `molecular_lab/database/`: local persistence, reference-molecule catalogue, external database adapters, and provenance-preserving imports.
 - `ui/`: desktop application.
 - `tests/`: unit, integration, and scientific validation tests.
 
@@ -39,6 +39,7 @@ Domain records should remain independent of specific scientific backends. Adapte
 - Keep candidate generation separate from candidate validation and ranking.
 - Make long-running calculations cancellable and report their status.
 - Preserve provenance from input through final result.
+- Check generated molecular candidates against local and optional external reference databases before presenting them as unregistered candidates.
 - Do not silently substitute one computational method for another.
 - Keep composition, structural identity, and calculation result as distinct records.
 - Version persisted data schemas independently from application release versions.
@@ -49,4 +50,4 @@ The UI framework, persistence technology, job scheduler, exact backend interface
 
 ## Implementation status
 
-This document describes intended boundaries only. No application orchestration, persistence, or scientific backend integration is implemented yet.
+The initial offline reference-molecule catalogue and lookup functions are implemented under `molecular_lab/database/`. General persistence, external database synchronization, application orchestration, and scientific backend integration remain unimplemented.
