@@ -10,6 +10,7 @@ import re
 
 from molecular_lab.calculations.ase_bridge import to_ase_atoms
 from molecular_lab.calculations.dft_settings import (
+    BandPath,
     DFTCalculationSettings,
     DFTOutput,
     DFTTask,
@@ -28,6 +29,13 @@ class QuantumEspressoInputError(ValueError):
 class PreparedQEInput:
     input_text: str
     required_pseudopotentials: tuple[str, ...]
+    warnings: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class PreparedQEDOSInput:
+    input_text: str
+    required_saved_calculation: str
     warnings: tuple[str, ...] = ()
 
 
@@ -78,11 +86,10 @@ def prepare_pw_input(
     if not isinstance(settings, DFTCalculationSettings):
         raise TypeError("settings must be DFTCalculationSettings")
 
-    if settings.task not in (DFTTask.SCF, DFTTask.RELAX, DFTTask.VC_RELAX):
-        raise QuantumEspressoInputError(
-            "pw.x adapter currently supports SCF, RELAX and VC_RELAX only; "
-            "BANDS and DOS need separate workflow inputs"
-        )
+    if settings.task not in (
+        DFTTask.SCF, DFTTask.RELAX, DFTTask.VC_RELAX, DFTTask.BANDS, DFTTask.DOS
+    ):
+        raise QuantumEspressoInputError("unsupported QE task")
     if settings.spin_orbit_coupling:
         raise QuantumEspressoInputError(
             "SOC input is not enabled until fully relativistic pseudopotential metadata is modeled"
@@ -97,7 +104,13 @@ def prepare_pw_input(
         raise QuantumEspressoInputError(
             "VC_RELAX currently requires three-dimensional periodic boundary conditions"
         )
-    supported_outputs = {DFTOutput.TOTAL_ENERGY, DFTOutput.FORCES, DFTOutput.STRESS}
+    supported_outputs = {
+        DFTTask.SCF: {DFTOutput.TOTAL_ENERGY, DFTOutput.STRESS},
+        DFTTask.RELAX: {DFTOutput.TOTAL_ENERGY, DFTOutput.FORCES, DFTOutput.STRESS},
+        DFTTask.VC_RELAX: {DFTOutput.TOTAL_ENERGY, DFTOutput.FORCES, DFTOutput.STRESS},
+        DFTTask.BANDS: {DFTOutput.BAND_STRUCTURE},
+        DFTTask.DOS: {DFTOutput.DENSITY_OF_STATES},
+    }[settings.task]
     unsupported = set(settings.requested_outputs).difference(supported_outputs)
     if unsupported:
         names = ", ".join(sorted(item.value for item in unsupported))
@@ -141,6 +154,8 @@ def prepare_pw_input(
         DFTTask.SCF: "scf",
         DFTTask.RELAX: "relax",
         DFTTask.VC_RELAX: "vc-relax",
+        DFTTask.BANDS: "bands",
+        DFTTask.DOS: "nscf",
     }[settings.task]
     cutoff_ry = settings.energy_cutoff.to(EnergyUnit.RYDBERG).value
     conv_thr_ry = settings.convergence.energy_tolerance_ev / _RY_EV
@@ -158,8 +173,8 @@ def prepare_pw_input(
         f"  prefix = '{prefix}'",
         f"  outdir = {_quoted_path(outdir, 'outdir')}",
         f"  pseudo_dir = {_quoted_path(pseudo_dir, 'pseudo_dir')}",
-        f"  tprnfor = {'.true.' if (DFTOutput.FORCES in settings.requested_outputs or settings.task is not DFTTask.SCF) else '.false.'}",
-        f"  tstress = {'.true.' if (DFTOutput.STRESS in settings.requested_outputs or settings.task is DFTTask.VC_RELAX) else '.false.'}",
+        f"  tprnfor = {'.true.' if settings.task in (DFTTask.RELAX, DFTTask.VC_RELAX) or DFTOutput.FORCES in settings.requested_outputs else '.false.'}",
+        f"  tstress = {'.true.' if DFTOutput.STRESS in settings.requested_outputs or settings.task is DFTTask.VC_RELAX else '.false.'}",
     ]
     if force_thr_ry_bohr is not None:
         if settings.task is DFTTask.SCF:
@@ -221,13 +236,27 @@ def prepare_pw_input(
         f"  {symbol:4s} " + " ".join(_number(float(v)) for v in position)
         for symbol, position in zip(symbols, scaled)
     )
-    sections.extend([
-        "",
-        "K_POINTS automatic",
-        "  " + " ".join(str(v) for v in settings.kpoint_mesh.grid)
-        + " " + " ".join(str(v) for v in shifts),
-        "",
-    ])
+    sections.append("")
+    if settings.task is DFTTask.BANDS:
+        if settings.band_path is None:
+            raise QuantumEspressoInputError(
+                "QE BANDS input requires explicit BandPath vertices; a reference string alone is insufficient"
+            )
+        sections.extend(["K_POINTS crystal_b", str(len(settings.band_path.points))])
+        for index, point in enumerate(settings.band_path.points):
+            subdivisions = point.points_to_next if index < len(settings.band_path.points) - 1 else 0
+            sections.append(
+                "  " + " ".join(_number(value) for value in point.coordinates)
+                + f" {subdivisions}"
+            )
+        sections.append("")
+    else:
+        sections.extend([
+            "K_POINTS automatic",
+            "  " + " ".join(str(v) for v in settings.kpoint_mesh.grid)
+            + " " + " ".join(str(v) for v in shifts),
+            "",
+        ])
 
     warnings = [
         "Pseudopotential files are referenced by name but are not downloaded, opened or validated.",
@@ -256,4 +285,45 @@ def prepare_pw_input(
             settings.pseudopotentials[element].file_name for element in species
         ),
         warnings=tuple(warnings),
+    )
+
+
+
+def prepare_qe_dos_postprocess_input(
+    settings: DFTCalculationSettings,
+    *,
+    prefix: str = "molecular_lab",
+    outdir: str = "./tmp",
+    output_file: str = "molecular_lab.dos",
+) -> PreparedQEDOSInput:
+    """Prepare dos.x input after a successful NSCF calculation.
+
+    The SCF and NSCF pw.x stages must already have completed in the same
+    prefix/outdir. This helper only creates dos.x input text.
+    """
+    if settings.task is not DFTTask.DOS or settings.dos is None:
+        raise QuantumEspressoInputError("DOS post-processing requires a DOS task with DOSSettings")
+    prefix = _token(prefix, "prefix")
+    if any(c in output_file for c in ("\\n", "\\r", "'", "!")) or not output_file:
+        raise QuantumEspressoInputError("output_file must be a safe non-empty filename")
+    dos = settings.dos
+    delta_ev = (dos.energy_max_ev - dos.energy_min_ev) / (dos.points - 1)
+    text = "\\n".join([
+        "&DOS",
+        f"  prefix = '{prefix}'",
+        f"  outdir = {_quoted_path(outdir, 'outdir')}",
+        f"  fildos = '{output_file}'",
+        f"  Emin = {_number(dos.energy_min_ev)}",
+        f"  Emax = {_number(dos.energy_max_ev)}",
+        f"  DeltaE = {_number(delta_ev)}",
+        "/",
+        "",
+    ])
+    return PreparedQEDOSInput(
+        input_text=text,
+        required_saved_calculation=f"{outdir.rstrip('/')}/{prefix}.save",
+        warnings=(
+            "dos.x input assumes a completed compatible SCF/NSCF workflow in the same prefix and outdir.",
+            "This helper prepares input only; it does not execute dos.x or parse its output.",
+        ),
     )
