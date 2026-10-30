@@ -6,6 +6,7 @@ Version: 0.1 | Rev.: 04
 from molecular_lab.calculations.qe_projection import (
     AtomicWavefunction, QEAtomicProjectionCoefficient, QEAtomicProjectionData,
     QEProjectionParseError, parse_qe_atomic_proj_xml, read_qe_atomic_proj_xml,
+    parse_qe_projwfc_band_output,
 )
 from molecular_lab.calculations.fatband import (
     FatBandContribution, FatBandDataset, FatBandPoint, build_fatband_dataset,
@@ -30,6 +31,7 @@ from molecular_lab.calculations.quantum_espresso import (
     PreparedQEInput, PreparedQEPostprocessInput, QuantumEspressoInputError,
     prepare_pw_input, prepare_qe_bands_postprocess_input,
     prepare_qe_dos_postprocess_input, prepare_qe_projected_dos_postprocess_input,
+    prepare_qe_fatband_projection_input,
 )
 from molecular_lab.calculations.gpaw import (
     GPAWInputError, GPAWUnavailableError, PreparedGPAWInput,
@@ -50,6 +52,7 @@ from molecular_lab.calculations.execution import (
 __all__ = [
     "AtomicWavefunction", "QEAtomicProjectionCoefficient", "QEAtomicProjectionData",
     "QEProjectionParseError", "parse_qe_atomic_proj_xml", "read_qe_atomic_proj_xml",
+    "parse_qe_projwfc_band_output",
     "FatBandContribution", "FatBandDataset", "FatBandPoint", "build_fatband_dataset",
     "BandEdgePDOSAnalysis", "PDOSWindowSummary", "ProjectedDOSAggregate",
     "aggregate_projected_dos", "analyze_band_edge_pdos",
@@ -63,6 +66,7 @@ __all__ = [
     "PreparedQEInput", "PreparedQEPostprocessInput", "QuantumEspressoInputError",
     "prepare_pw_input", "prepare_qe_bands_postprocess_input",
     "prepare_qe_dos_postprocess_input", "prepare_qe_projected_dos_postprocess_input",
+    "prepare_qe_fatband_projection_input",
     "QEOutputParseError", "parse_qe_bands_gnu", "parse_qe_fermi_level",
     "parse_qe_total_dos", "read_qe_bands_gnu", "read_qe_total_dos",
     "parse_qe_projected_dos", "read_qe_projected_dos",
