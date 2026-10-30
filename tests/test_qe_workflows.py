@@ -179,3 +179,101 @@ def test_qe_projected_dos_workflow_runs_projwfc_and_returns_atom_orbitals(tmp_pa
     assert result.density_of_states is None
     assert result.projected_density_of_states.records[0].element == "Si"
     assert result.projected_density_of_states.records[0].angular_momentum == 1
+
+
+def test_qe_fatband_workflow_runs_projwfc_and_joins_original_state_weights(tmp_path, monkeypatch):
+    from dataclasses import replace
+
+    patch_scf(monkeypatch)
+    settings = replace(
+        bands_settings(),
+        requested_outputs=(DFTOutput.BAND_STRUCTURE, DFTOutput.FAT_BAND_STRUCTURE),
+    )
+    xml = """<ATOMIC_PROJECTIONS>
+      <HEADER NUMBER_OF_BANDS="2" NUMBER_OF_K-POINTS="2"
+              NUMBER_OF_SPIN_COMPONENTS="1" NUMBER_OF_ATOMIC_WFC="3"/>
+      <EIGENSTATES>
+        <PROJS>
+          <ATOMIC_WFC index="1">0.5 0.0 0.25 0.0</ATOMIC_WFC>
+          <ATOMIC_WFC index="2">0.0 0.5 0.0 0.25</ATOMIC_WFC>
+          <ATOMIC_WFC index="3">0.1 0.2 0.3 0.4</ATOMIC_WFC>
+        </PROJS>
+        <PROJS>
+          <ATOMIC_WFC index="1">0.4 0.0 0.2 0.0</ATOMIC_WFC>
+          <ATOMIC_WFC index="2">0.0 0.4 0.0 0.2</ATOMIC_WFC>
+          <ATOMIC_WFC index="3">0.2 0.1 0.4 0.3</ATOMIC_WFC>
+        </PROJS>
+      </EIGENSTATES>
+    </ATOMIC_PROJECTIONS>"""
+    projection_stdout = """
+    Atomic states used for projection
+    state # 1: atom 1 (Si), wfc 1 (l=0 m=0)
+    state # 2: atom 1 (Si), wfc 2 (l=2 m=0)
+    state # 3: atom 2 (O), wfc 1 (l=1 m=1)
+    k = 0.0000000000 0.0000000000 0.0000000000
+    ==== e(   1) = -1.00000 eV ====
+    ==== e(   2) =  1.00000 eV ====
+    k = 0.5000000000 0.0000000000 0.0000000000
+    ==== e(   1) = -0.80000 eV ====
+    ==== e(   2) =  1.20000 eV ====
+    JOB DONE.
+    """
+
+    def run(executable, input_text, *, workdir, **kwargs):
+        if executable == "bands.x":
+            (workdir / "molecular_lab.bands.gnu").write_text(
+                "0 -1\\n0.5 -0.8\\n\\n0 1\\n0.5 1.2\\n",
+                encoding="utf-8",
+            )
+            stdout = "JOB DONE."
+        elif executable == "projwfc.x":
+            save_dir = workdir / "tmp" / "molecular_lab.save"
+            save_dir.mkdir(parents=True, exist_ok=True)
+            (save_dir / "atomic_proj.xml").write_text(xml, encoding="utf-8")
+            stdout = projection_stdout
+        else:
+            stdout = "JOB DONE."
+        return SimpleNamespace(returncode=0, stdout=stdout, stderr=""), None
+
+    monkeypatch.setattr(execution, "_run_qe_input", run)
+    result = execute_qe_bands(
+        crystal(), settings, working_directory=tmp_path,
+        projwfc_executable="projwfc.x",
+    )
+    assert result.status is DFTExecutionStatus.SUCCEEDED, result.message
+    assert result.band_structure is not None
+    assert result.fat_band_structure is not None
+    assert len(result.fat_band_structure.points) == 4
+    first = next(
+        point for point in result.fat_band_structure.points
+        if point.kpoint_index == 0 and point.band_index == 1
+    )
+    assert first.energy_ev == pytest.approx(-1.0)
+    si_s = next(
+        item for item in first.contributions
+        if item.element == "Si" and item.angular_momentum == 0
+    )
+    assert si_s.raw_weight == pytest.approx(0.25)
+
+
+def test_qe_fatband_workflow_fails_if_atomic_projection_xml_is_missing(tmp_path, monkeypatch):
+    from dataclasses import replace
+
+    patch_scf(monkeypatch)
+    settings = replace(
+        bands_settings(),
+        requested_outputs=(DFTOutput.BAND_STRUCTURE, DFTOutput.FAT_BAND_STRUCTURE),
+    )
+
+    def run(executable, input_text, *, workdir, **kwargs):
+        if executable == "bands.x":
+            (workdir / "molecular_lab.bands.gnu").write_text(
+                "0 -1\\n0.5 -0.8\\n\\n0 1\\n0.5 1.2\\n",
+                encoding="utf-8",
+            )
+        return SimpleNamespace(returncode=0, stdout="JOB DONE.", stderr=""), None
+
+    monkeypatch.setattr(execution, "_run_qe_input", run)
+    result = execute_qe_bands(crystal(), settings, working_directory=tmp_path)
+    assert result.status is DFTExecutionStatus.FAILED
+    assert "atomic_proj.xml" in result.message
