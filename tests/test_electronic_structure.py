@@ -9,7 +9,7 @@ def _kpoints():
     return (KPoint((0.0, 0.0, 0.0), 0.5), KPoint((0.5, 0.0, 0.0), 0.5))
 
 def test_indirect_gap_is_distinguished_from_direct_gap():
-    channel = BandChannelData("total", ((-1.0, -0.4), (1.2, 0.7)), ((2.0, 2.0), (0.0, 0.0)))
+    channel = BandChannelData("total", ((-1.0, -0.4), (0.7, 1.2)), ((2.0, 2.0), (0.0, 0.0)))
     result = assess_band_gap(BandStructureData(_kpoints(), (channel,)))
     assert result.status is BandGapStatus.GAP
     assert result.indirect_gap_ev == pytest.approx(1.1)
