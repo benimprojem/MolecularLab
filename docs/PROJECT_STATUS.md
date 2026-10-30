@@ -175,3 +175,26 @@ At the beginning of each new Molecular Lab conversation:
 **Documentation update (2026-10-30):** `docs/FAT_BANDS.md` now includes an end-to-end Python example showing the opt-in QE fat-band execution request, retrieval of `result.fat_band_structure`, plot-data preparation using the same `BandPath` and direct lattice vectors, and writing the self-contained SVG output. The example is illustrative and is not a validated material input deck. The latest status-report commit `dc0d8566a6734c66b2dc540c907ba3f892b0974e` also has a successful GitHub Actions run: https://github.com/benimprojem/MolecularLab/actions/runs/41091772699. The latest full code-test run remains the successful 280 passed / 1 skipped RDKit-enabled run recorded above.
 
 **Example hardening (2026-10-30):** The end-to-end usage snippet now creates its QE working directory before calling the execution API, matching the runner's existing-directory contract. **Active hand-off point:** Validate the complete flow against a real QE reference calculation, then design the interactive fat-band UI. The plot-data layer, static SVG renderer and usage documentation are implemented; automated tests remain synthetic/mocked. Continue from `DFTExecutionResult.fat_band_structure`, `prepare_fatband_plot_data` and `render_fatband_svg`. Do not restart the parser, execution pipeline, chemical graph, crystal foundation or PDOS implementation from scratch.
+
+
+## 9. Real QE validation preparation (2026-10-30)
+
+- Added optional `DFTCalculationSettings.charge_density_cutoff` with type and
+  lower-bound validation against `energy_cutoff`.
+- QE input generation now emits `ecutrho` in Ry when explicitly supplied;
+  it does not invent a pseudopotential-dependent default.
+- Added tests for `ecutrho` emission and invalid lower values.
+- Added `examples/qe_silicon_fatbands.py`: a real-solver smoke-test entry point
+  using a primitive diamond silicon cell, caller-supplied PBE UPF/cutoffs,
+  SCF → BANDS → `bands.x` → `projwfc.x` → SVG.
+- Added `docs/QE_REFERENCE_VALIDATION.md` with setup, run command, provenance
+  capture and convergence requirements.
+- The smoke-test path is deliberately short (Γ-X-L-Γ); it verifies the
+  workflow, not a complete publication-quality band path.
+- No actual QE solver run has been performed by this change. Real execution,
+  output inspection and convergence remain pending.
+
+**Next exact step:** Run the silicon example in an environment with QE/ASE and
+a licensed, identified PBE silicon UPF; capture the solver version, UPF hash,
+cutoffs, k-mesh, output files and convergence evidence before marking the
+real-QE validation milestone complete.
