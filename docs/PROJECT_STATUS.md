@@ -303,3 +303,6 @@ are available. Real QE execution and scientific convergence remain pending.
 - QE fat-band execution now runs this check before attaching projection weights. Default tolerance is 1e-4 eV; the helper supports an explicit tolerance for tests or other callers.
 - Added tests for harmless band reordering, a changed spectrum at one k-point, small tolerated numeric differences, tolerance rejection and band-count mismatch.
 - This validates spectral consistency only. It does not identify band-crossing correspondence or prove raw k-vector coordinate identity; those remain separate tasks.
+
+
+**Projection-weight advisory diagnostics (2026-10-30):** Added `diagnose_fatband_projection_weights()` and immutable warning records. It flags near-zero total state weights, unusually high total raw weights and unusually high individual atom/orbital contributions. All thresholds are configurable; defaults are explicitly heuristic (1e-12 for near-zero and 1.0 for high values). Diagnostics do not reject, normalize or mutate raw projection data. Tests cover zero/high warnings and invalid thresholds.
