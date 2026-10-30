@@ -34,12 +34,25 @@ class AtomicWavefunction:
     source_label: str = ""
 
     def __post_init__(self) -> None:
+        indices = (self.index, self.atom_index, self.wavefunction_index, self.angular_momentum)
+        if any(isinstance(value, bool) or not isinstance(value, int) for value in indices):
+            raise ValueError("QE atomic-wavefunction indices and angular momentum must be integers")
         if self.index < 1 or self.atom_index < 1 or self.wavefunction_index < 1:
             raise ValueError("QE atomic-wavefunction indices must be positive")
-        if not self.element:
+        if not isinstance(self.element, str) or not self.element.strip():
             raise ValueError("element cannot be empty")
         if self.angular_momentum < 0:
             raise ValueError("angular_momentum cannot be negative")
+        if self.magnetic_number is not None and (
+            isinstance(self.magnetic_number, bool) or not isinstance(self.magnetic_number, int)
+        ):
+            raise ValueError("magnetic_number must be an integer when supplied")
+        if self.total_angular_momentum is not None and (
+            isinstance(self.total_angular_momentum, bool)
+            or not isinstance(self.total_angular_momentum, (int, float))
+            or not math.isfinite(self.total_angular_momentum)
+        ):
+            raise ValueError("total_angular_momentum must be finite when supplied")
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,6 +123,8 @@ class QEAtomicProjectionData:
             if atom_wfc in atom_wfcs:
                 raise ValueError(f"duplicate wavefunction index for atom {item.atom_index}")
             atom_wfcs.add(atom_wfc)
+        if not atom_elements:
+            raise ValueError("atomic wavefunction metadata cannot be empty")
         if sorted(atom_elements) != list(range(1, max(atom_elements) + 1)):
             raise ValueError("atom indices in projector metadata must be contiguous and one-based")
         expected = {
