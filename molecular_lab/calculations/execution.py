@@ -85,9 +85,9 @@ def _validate_request(
     )
     unsupported = set(settings.requested_outputs).difference(allowed)
     if unsupported:
-        raise ValueError(
-            "execution currently supports total energy and, for RELAX, forces only"
-        )
+        if settings.task is DFTTask.SCF:
+            raise ValueError("SCF execution currently supports total energy only")
+        raise ValueError("RELAX execution currently supports total energy and forces only")
     if settings.task is DFTTask.RELAX:
         if not all(structure.periodic_boundary_conditions):
             raise ValueError("fixed-cell RELAX currently requires 3D periodic boundary conditions")
