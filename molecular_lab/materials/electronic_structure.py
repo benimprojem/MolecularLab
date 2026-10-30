@@ -121,8 +121,11 @@ def assess_band_gap(data: BandStructureData, *, gap_tolerance_ev: float = 1e-5) 
                     occupation = channel.occupations[band_index][k_index]
                     full = channel.maximum_occupation
                     if data.occupation_tolerance < occupation < full - data.occupation_tolerance:
-                        return BandGapAssessment(BandGapStatus.METALLIC,
-                            reason=f"Partial band occupation in {channel.spin_channel} at k-point {k_index}.")
+                        if data.fermi_level_ev is not None and abs(energy - data.fermi_level_ev) <= gap_tolerance_ev:
+                            return BandGapAssessment(BandGapStatus.METALLIC,
+                                reason=f"Partially occupied state lies at the Fermi level in {channel.spin_channel} at k-point {k_index}.")
+                        return BandGapAssessment(BandGapStatus.UNDETERMINED,
+                            reason="Partial occupation detected; finite-temperature or smearing effects cannot be distinguished from metallic occupation without additional context.")
                     if occupation >= full - data.occupation_tolerance:
                         occupied.append(energy)
                     elif occupation <= data.occupation_tolerance:
