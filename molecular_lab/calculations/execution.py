@@ -730,6 +730,7 @@ def execute_qe_bands(
                 fermi_level_ev=fermi_level,
                 backend_version=scf_result.backend_version,
                 exchange_correlation=settings.exchange_correlation,
+                band_path=settings.band_path,
             )
             if len(original_state_bands.kpoints) != len(band_data.kpoints):
                 raise ValueError(
