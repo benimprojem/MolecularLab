@@ -106,7 +106,9 @@ conventional `DFTOutput.BAND_STRUCTURE` output. The runner adds a
 
 The conventional band result remains based on `bands.x`. Fat-band energies
 are read from the original eigenstate records in `projwfc.x` output so the
-raw atomic projection coefficients retain their original `pw.x\) band identity.
+raw atomic projection coefficients retain their original `pw.x` band identity.
+Fractional k-point coordinates are reconstructed from the requested structured
+`BandPath`, rather than inferred from the printed k-vector unit convention.
 This avoids silently assigning weights to a band index that `bands.x` may
 have reordered near a crossing. The current implementation is non-spin-
 polarized and scalar-relativistic only. It has synthetic/mocked workflow tests;
