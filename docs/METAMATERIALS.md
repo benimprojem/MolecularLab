@@ -20,6 +20,15 @@ The metamaterial engine is intended to support coupled investigation across:
 
 DC conductivity, AC conductivity, dielectric loss, and optical absorption are related but not interchangeable. Each reported value must retain its unit, conditions, spectral range, method, uncertainty, and evidence category.
 
+## Electrical behavior classification
+
+The initial classification helper is deliberately criterion-driven. A caller must provide two cutoffs and identify their source:
+
+- For a band-gap criterion (eV), values at/below the lower cutoff are labelled conductor-like, values at/above the upper cutoff insulator-like, and intermediate values semiconductor-like.
+- For a conductivity criterion (S/m), values at/below the lower cutoff are labelled insulator-like, values at/above the upper cutoff conductor-like, and intermediate values semiconductor-like.
+
+Every assessment records the selected metric, thresholds, criterion source, temperature, and frequency (0 Hz denotes DC). The label is a screening classification under that criterion, not a universal statement about the material. It does not infer mobility, carrier type, anisotropy, contacts, or transport mechanism. Conflicting evidence from band structure and transport must be retained and reviewed rather than silently forced into one class.
+
 ## Distinguish the physical mechanisms
 
 - **Resonant metamaterials:** patterned inclusions or resonators produce frequency-dependent electric and/or magnetic response. Loss, bandwidth, coupling, and fabrication tolerances matter.
@@ -94,6 +103,6 @@ For effective parameters, record retrieval procedure, reference planes, branch c
 
 ## Current implementation status
 
-Implemented: immutable design/unit-cell/typed-target records and a frequency-dependent material-response schema with complex scalar/tensor values, temperature and propagation metadata, uncertainty magnitudes, convergence status, solver provenance, and evidence records.
+Implemented: immutable design/unit-cell/typed-target records; frequency-dependent material-response schema with complex scalar/tensor values, temperature and propagation metadata, uncertainty magnitudes, convergence status, solver provenance, and evidence records; and explicit-criterion electrical behavior screening using band gap or conductivity.
 
-Not implemented: actual electromagnetic/electronic/transport/magnetic solver adapters, geometry generators, material dispersion database, homogenization/retrieval, inverse optimizer, fabrication constraints, experimental-data ingestion, or a standardized statistical uncertainty interpretation.
+Not implemented: actual electromagnetic/electronic/transport/magnetic solver adapters, geometry generators, material dispersion database, homogenization/retrieval, inverse optimizer, fabrication constraints, experimental-data ingestion, cross-metric conflict resolution, or a standardized statistical uncertainty interpretation.
