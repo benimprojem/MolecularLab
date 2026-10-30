@@ -32,7 +32,7 @@ from molecular_lab.database.reference_molecules import (
     identify_candidate,
 )
 from molecular_lab.engines.composition_enumerator import iter_compositions
-from molecular_lab.engines.molecular_graphs import iter_saturated_acyclic_graphs
+from molecular_lab.engines.molecular_graphs import iter_acyclic_graphs
 from molecular_lab.engines.structure_identification import (
     GraphIdentificationResult,
     identify_graph_against_catalogue,
@@ -67,8 +67,8 @@ def iter_forward_discovery(
     number of raw combinations silently skipped. Every yielded result carries
     diagnostics and catalogue status, even if no graph can be proposed.
 
-    The current graph prototype is molecular-only, neutral, saturated,
-    acyclic, and limited to H/C/N/O/F/Cl. Out-of-scope compositions remain
+    The current graph prototype is molecular-only, neutral, acyclic, and limited
+    to fixed-valence H/C/N/O/F/Cl chemistry with bond orders 1-3. Out-of-scope compositions remain
     visible in the output with an explanatory graph-generation status.
     """
     for name, value in (
@@ -124,7 +124,7 @@ def iter_forward_discovery(
             )
         else:
             graphs = tuple(
-                iter_saturated_acyclic_graphs(
+                iter_acyclic_graphs(
                     composition,
                     max_candidates=max_graphs_per_composition,
                     max_heavy_atoms=max_heavy_atoms,
@@ -137,7 +137,7 @@ def iter_forward_discovery(
                 status = "graphs_proposed"
                 note = (
                     "One or more connectivity hypotheses were generated within "
-                    "the restricted saturated acyclic graph model."
+                    "the restricted bond-order-aware acyclic graph model."
                 )
             else:
                 status = "no_graph_within_prototype_scope"
