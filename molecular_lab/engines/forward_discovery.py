@@ -64,6 +64,7 @@ def iter_forward_discovery(
     max_compositions: int = 1000,
     max_graphs_per_composition: int = 100,
     max_heavy_atoms: int = 8,
+    max_fused_heavy_atoms: int = 16,
     max_graph_assignments: int = 100000,
 ) -> Iterator[ForwardDiscoveryResult]:
     """
@@ -74,14 +75,15 @@ def iter_forward_discovery(
     diagnostics and catalogue status, even if no graph can be proposed.
 
     The current graph prototypes are molecular-only, neutral, and limited to
-    fixed-valence H/C/N/O/F/Cl chemistry with bond orders 1-3, plus a narrow
-    carbon-only linear fused-acene generator. Out-of-scope compositions remain
+    fixed-valence H/C/N/O/F/Cl chemistry with bond orders 1-3, plus registered
+    carbon-only fused-benzenoid templates. Fused systems use their own atom bound. Out-of-scope compositions remain
     visible in the output with an explanatory graph-generation status.
     """
     for name, value in (
         ("max_compositions", max_compositions),
         ("max_graphs_per_composition", max_graphs_per_composition),
         ("max_heavy_atoms", max_heavy_atoms),
+        ("max_fused_heavy_atoms", max_fused_heavy_atoms),
         ("max_graph_assignments", max_graph_assignments),
     ):
         if isinstance(value, bool) or not isinstance(value, int) or value < 1:
@@ -146,7 +148,7 @@ def iter_forward_discovery(
             fused_iter = iter_fused_benzenoid_graphs(
                 composition,
                 max_candidates=max_graphs_per_composition,
-                max_heavy_atoms=max_heavy_atoms,
+                max_heavy_atoms=max_fused_heavy_atoms,
                 max_assignments=max_graph_assignments,
             )
             proposed: list[MolecularGraph] = []
