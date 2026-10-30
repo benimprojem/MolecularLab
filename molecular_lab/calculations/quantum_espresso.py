@@ -33,7 +33,7 @@ class PreparedQEInput:
 
 
 @dataclass(frozen=True, slots=True)
-class PreparedQEDOSInput:
+class PreparedQEPostprocessInput:
     input_text: str
     required_saved_calculation: str
     warnings: tuple[str, ...] = ()
@@ -295,7 +295,7 @@ def prepare_qe_bands_postprocess_input(
     prefix: str = "molecular_lab",
     outdir: str = "./tmp",
     output_file: str = "molecular_lab.bands",
-) -> PreparedQEDOSInput:
+) -> PreparedQEPostprocessInput:
     """Prepare bands.x input after a successful pw.x BANDS calculation."""
     if settings.task is not DFTTask.BANDS or settings.band_path is None:
         raise QuantumEspressoInputError("bands.x preparation requires a BANDS task with BandPath")
@@ -311,7 +311,7 @@ def prepare_qe_bands_postprocess_input(
         "/",
         "",
     ])
-    return PreparedQEDOSInput(
+    return PreparedQEPostprocessInput(
         input_text=text,
         required_saved_calculation=f"{outdir.rstrip('/')}/{prefix}.save",
         warnings=(
@@ -327,7 +327,7 @@ def prepare_qe_dos_postprocess_input(
     prefix: str = "molecular_lab",
     outdir: str = "./tmp",
     output_file: str = "molecular_lab.dos",
-) -> PreparedQEDOSInput:
+) -> PreparedQEPostprocessInput:
     """Prepare dos.x input after a successful NSCF calculation.
 
     The SCF and NSCF pw.x stages must already have completed in the same
@@ -353,7 +353,7 @@ def prepare_qe_dos_postprocess_input(
         "/",
         "",
     ])
-    return PreparedQEDOSInput(
+    return PreparedQEPostprocessInput(
         input_text=text,
         required_saved_calculation=f"{outdir.rstrip('/')}/{prefix}.save",
         warnings=(
