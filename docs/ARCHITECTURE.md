@@ -81,3 +81,8 @@ The UI framework, persistence technology, job scheduler, internal unit conventio
 Implemented: backend-neutral DFT settings; optional ASE structure conversion; QE `pw.x` input-deck generation and SCF/fixed-cell RELAX execution; GPAW calculator preparation and SCF/fixed-cell RELAX execution; common backend dispatch; common solver orchestration; molecular and material data models; bounded forward discovery; electronic-structure and periodic crystal records.
 
 Not implemented: variable-cell optimization; BANDS/DOS multi-stage workflows; stress normalization; automatic pseudopotential/PAW setup acquisition and validation; SOC and species/sublattice magnetic initialization; broad crystal structure generation; stability assessment; persistent job queue/cancellation; and actual material-property calculations.
+
+
+## DFT execution and variable-cell relaxation (Rev. 14)
+
+The common execution layer dispatches SCF, fixed-cell ionic RELAX and variable-cell VC_RELAX requests to Quantum ESPRESSO or GPAW. Structural optimization returns a new crystal structure rather than mutating the source model. Stress results use a shared GPa, tension-positive convention. VC_RELAX requires explicit force and stress tolerances; QE maps the stress threshold to its native pressure convergence input, while GPAW uses ASE FrechetCellFilter and performs an independent final stress-residual check. See [DFT Execution](DFT_EXECUTION.md) for supported behavior and limitations.
