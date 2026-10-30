@@ -68,8 +68,8 @@ def _graph_to_identifiers(
     graph: MolecularGraph,
     chem: Any,
     inchi: Any,
-) -> tuple[str, str]:
-    """Convert an explicit graph to canonical SMILES and an InChIKey."""
+) -> tuple[str, str, str]:
+    """Convert a graph to canonical identifiers and RDKit-perceived aromaticity."""
     editable = chem.RWMol()
     atom_indices: dict[int, int] = {}
     periodic_table = chem.GetPeriodicTable()
