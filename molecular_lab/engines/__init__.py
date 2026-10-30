@@ -7,6 +7,7 @@ from molecular_lab.engines.molecular_graphs import (
     iter_acyclic_graphs,
     iter_saturated_acyclic_graphs,
     iter_unicyclic_graphs,
+    iter_linear_fused_acene_graphs,
 )
 from molecular_lab.engines.forward_discovery import (
     ForwardDiscoveryResult,
@@ -25,6 +26,7 @@ __all__ = [
     "iter_acyclic_graphs",
     "iter_saturated_acyclic_graphs",
     "iter_unicyclic_graphs",
+    "iter_linear_fused_acene_graphs",
     "iter_forward_discovery",
     "run_forward_discovery",
 ]
