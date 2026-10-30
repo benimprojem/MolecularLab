@@ -1,0 +1,123 @@
+"""Aggregation helpers for atom/orbital projected density of states.
+
+These helpers sum supplied projector values; they do not make the projection
+unique or guarantee completeness of the atomic projector basis.
+Version: 0.1 | Rev.: 01
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from math import isfinite
+
+from molecular_lab.materials.electronic_structure import ProjectedDensityOfStatesData
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectedDOSAggregate:
+    """Summed PDOS for one selected atom/element, angular momentum and spin."""
+    element: str | None
+    atom_index: int | None
+    angular_momentum: int
+    spin_channel: str
+    local_dos_states_per_ev: tuple[float, ...]
+    component_dos_states_per_ev: tuple[float, ...]
+
+    def __post_init__(self):
+        local = tuple(self.local_dos_states_per_ev)
+        components = tuple(self.component_dos_states_per_ev)
+        if self.angular_momentum < 0 or not self.spin_channel.strip():
+            raise ValueError("angular momentum and spin channel must be valid")
+        if (self.element is None) == (self.atom_index is None):
+            raise ValueError("aggregate must identify exactly one element or atom")
+        if not local or len(local) != len(components):
+            raise ValueError("aggregate arrays must be non-empty and have equal lengths")
+        if any(not isfinite(v) or v < 0 for v in local + components):
+            raise ValueError("aggregate DOS values must be finite and non-negative")
+        object.__setattr__(self, "local_dos_states_per_ev", local)
+        object.__setattr__(self, "component_dos_states_per_ev", components)
+
+
+def aggregate_projected_dos(
+    data: ProjectedDensityOfStatesData,
+    *,
+    group_by: str = "element",
+) -> tuple[ProjectedDOSAggregate, ...]:
+    """Sum PDOS over atoms or wavefunctions, retaining l and spin separately.
+
+    group_by='element' sums same-element atoms; group_by='atom' keeps each
+    atom separate. For each l channel, angular components are summed across
+    wavefunctions and (when requested) atoms. Spin channels are never merged.
+    """
+    if group_by not in {"element", "atom"}:
+        raise ValueError("group_by must be 'element' or 'atom'")
+    buckets = {}
+    for record in data.records:
+        identity = record.element if group_by == "element" else record.atom_index
+        key = (identity, record.angular_momentum, record.spin_channel)
+        if key not in buckets:
+            buckets[key] = ([0.0] * len(data.energies_ev),
+                            [0.0] * len(data.energies_ev))
+        local_sum, component_sum = buckets[key]
+        for i, value in enumerate(record.local_dos_states_per_ev):
+            local_sum[i] += value
+        for component in record.components:
+            for i, value in enumerate(component.density_states_per_ev):
+                component_sum[i] += value
+
+    result = []
+    for (identity, angular_momentum, spin), (local, components) in sorted(
+        buckets.items(), key=lambda item: (str(item[0][0]), item[0][1], item[0][2])
+    ):
+        result.append(ProjectedDOSAggregate(
+            element=identity if group_by == "element" else None,
+            atom_index=identity if group_by == "atom" else None,
+            angular_momentum=angular_momentum,
+            spin_channel=spin,
+            local_dos_states_per_ev=tuple(local),
+            component_dos_states_per_ev=tuple(components),
+        ))
+    return tuple(result)
+
+
+def integrate_pdos_window(
+    energies_ev: tuple[float, ...],
+    density_states_per_ev: tuple[float, ...],
+    lower_ev: float,
+    upper_ev: float,
+) -> float:
+    """Trapezoid-integrate a DOS curve over an energy window in eV.
+
+    Window boundaries are linearly interpolated when they fall between
+    sampled points. The returned value is an integrated projected-state
+    count under the supplied DOS normalization.
+    """
+    energies = tuple(energies_ev)
+    density = tuple(density_states_per_ev)
+    if len(energies) < 2 or len(energies) != len(density):
+        raise ValueError("energy and DOS arrays must have equal length >= 2")
+    if any(not isfinite(v) for v in energies) or any(
+        not isfinite(v) or v < 0 for v in density
+    ):
+        raise ValueError("energies and DOS values must be finite; DOS must be non-negative")
+    if any(b <= a for a, b in zip(energies, energies[1:])):
+        raise ValueError("energy grid must be strictly increasing")
+    if not isfinite(lower_ev) or not isfinite(upper_ev) or lower_ev >= upper_ev:
+        raise ValueError("energy window must have finite lower < upper bounds")
+    if lower_ev < energies[0] or upper_ev > energies[-1]:
+        raise ValueError("energy window must lie within the sampled energy grid")
+
+    def interpolate(x):
+        for i in range(len(energies) - 1):
+            left, right = energies[i], energies[i + 1]
+            if left <= x <= right:
+                fraction = (x - left) / (right - left)
+                return density[i] + fraction * (density[i + 1] - density[i])
+        return density[-1]
+
+    points = [(lower_ev, interpolate(lower_ev))]
+    points.extend((e, d) for e, d in zip(energies, density) if lower_ev < e < upper_ev)
+    points.append((upper_ev, interpolate(upper_ev)))
+    return sum(
+        (x1 - x0) * (y0 + y1) / 2
+        for (x0, y0), (x1, y1) in zip(points, points[1:])
+    )
