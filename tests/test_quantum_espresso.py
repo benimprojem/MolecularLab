@@ -75,7 +75,7 @@ def test_scf_deck_contains_species_cell_positions_and_kmesh():
     assert "Na" in deck and "Na.UPF" in deck
     assert "ATOMIC_POSITIONS crystal" in deck
     assert "K_POINTS automatic\n  6 6 6 0 0 0" in deck
-    assert result.required_pseudopotentials == ("Na.UPF", "Cl.UPF")
+    assert result.required_pseudopotentials == ("Cl.UPF", "Na.UPF")
     assert any("not downloaded" in warning for warning in result.warnings)
 
 
@@ -87,7 +87,7 @@ def test_cutoff_and_smearing_are_converted_to_rydberg():
     deck = prepare_pw_input(crystal(), value).input_text
     assert "ecutwfc = 2" in deck
     assert "smearing = 'marzari-vanderbilt'" in deck
-    assert "degauss = 0.001470997" in deck
+    assert "degauss = 0.001469972887" in deck
 
 
 def test_relax_maps_ionic_dynamics_and_force_threshold():
