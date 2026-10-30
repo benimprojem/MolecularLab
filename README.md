@@ -2,7 +2,7 @@
 Project: Molecular Lab
 Version: 0.1
 Rev.: 25
-Status: SCF, fixed-cell RELAX and variable-cell VC_RELAX execution prototype for QE and GPAW
+Status: QE BANDS and total DOS workflow execution prototype; SCF/RELAX/VC_RELAX on QE and GPAW
 -->
 
 # Molecular Lab
