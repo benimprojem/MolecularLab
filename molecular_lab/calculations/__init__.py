@@ -29,6 +29,7 @@ from molecular_lab.calculations.qe_output import (
 from molecular_lab.calculations.execution import (
     DFTExecutionResult, DFTExecutionStatus,
     execute_dft_calculation, execute_gpaw, execute_gpaw_scf,
+    execute_qe_bands, execute_qe_dos,
     execute_quantum_espresso, execute_quantum_espresso_scf,
 )
 
@@ -48,5 +49,6 @@ __all__ = [
     "build_optimization_target", "create_gpaw_calculator", "prepare_gpaw_input",
     "DFTExecutionResult", "DFTExecutionStatus",
     "execute_dft_calculation", "execute_gpaw", "execute_gpaw_scf",
+    "execute_qe_bands", "execute_qe_dos",
     "execute_quantum_espresso", "execute_quantum_espresso_scf",
 ]
