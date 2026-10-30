@@ -2,8 +2,8 @@
 Identify restricted molecular graph proposals against the local reference catalogue.
 
 Version: 0.1
-Rev.: 00
-Status: Optional RDKit adapter; formula-only fallback remains available.
+Rev.: 01
+Status: Optional RDKit adapter with aromaticity reporting; formula-only fallback remains available.
 
 RDKit is imported lazily. If it is unavailable, graph composition is still
 checked against the catalogue, but exact structure identity is not claimed.
@@ -35,6 +35,7 @@ class GraphIdentificationResult:
     match_level: MatchLevel
     matches: tuple[ReferenceMolecule, ...]
     explanation: str
+    aromaticity_status: str = "not_assessed"
 
 
 def _load_rdkit() -> tuple[Any, Any] | None:
@@ -96,9 +97,12 @@ def _graph_to_identifiers(
     smiles_molecule = chem.RemoveHs(molecule)
     smiles = chem.MolToSmiles(smiles_molecule, canonical=True)
     inchi_key = inchi.MolToInchiKey(molecule)
+    aromatic_bond_count = sum(1 for bond in molecule.GetBonds() if bond.GetIsAromatic())
+    aromatic_atom_count = sum(1 for atom in molecule.GetAtoms() if atom.GetIsAromatic())
     if not smiles or not inchi_key:
         raise ValueError("RDKit did not produce a canonical identifier")
-    return smiles, inchi_key
+    aromaticity = "aromatic_detected" if aromatic_atom_count and aromatic_bond_count else "no_aromaticity_detected"
+    return smiles, inchi_key, aromaticity
 
 
 def identify_graph_against_catalogue(
@@ -135,7 +139,7 @@ def identify_graph_against_catalogue(
 
     chem, inchi = rdkit
     try:
-        smiles, inchi_key = _graph_to_identifiers(graph, chem, inchi)
+        smiles, inchi_key, aromaticity_status = _graph_to_identifiers(graph, chem, inchi)
     except Exception as exc:
         lookup = identify_candidate(composition)
         return GraphIdentificationResult(
@@ -163,4 +167,5 @@ def identify_graph_against_catalogue(
         match_level=lookup.match_level,
         matches=lookup.matches,
         explanation=lookup.explanation,
+        aromaticity_status=aromaticity_status,
     )
