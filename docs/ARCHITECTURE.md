@@ -1,10 +1,10 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 00 | Status: Initial outline -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 01 | Status: Initial architecture refinement -->
 
 # System Architecture
 
 ## Purpose
 
-Define the planned boundaries and responsibilities of Molecular Lab modules. This document is an architectural outline; it does not describe implemented behavior.
+Define the planned boundaries and responsibilities of Molecular Lab modules. This document is an architectural outline; it does not describe implemented scientific behavior.
 
 ## High-level layers
 
@@ -26,6 +26,12 @@ Define the planned boundaries and responsibilities of Molecular Lab modules. Thi
 - `ui/`: desktop application.
 - `tests/`: unit, integration, and scientific validation tests.
 
+## Domain data contract
+
+The shared domain contract is specified in [DATA_MODEL.md](DATA_MODEL.md). It defines the initial records and relationships for elements, isotopes, compositions, search constraints, molecular graphs, geometries, crystal structures, candidates, calculations, properties, and evidence.
+
+Domain records should remain independent of specific scientific backends. Adapters are responsible for conversion and must preserve atom identity, units, conditions, and provenance.
+
 ## Design requirements
 
 - Keep calculation backends behind explicit interfaces.
@@ -34,7 +40,13 @@ Define the planned boundaries and responsibilities of Molecular Lab modules. Thi
 - Make long-running calculations cancellable and report their status.
 - Preserve provenance from input through final result.
 - Do not silently substitute one computational method for another.
+- Keep composition, structural identity, and calculation result as distinct records.
+- Version persisted data schemas independently from application release versions.
 
 ## Open decisions
 
-The UI framework, persistence technology, job scheduler, and exact backend interfaces will be selected during implementation and documented here when decided.
+The UI framework, persistence technology, job scheduler, exact backend interfaces, internal unit convention, and validation library will be selected during implementation and documented here when decided.
+
+## Implementation status
+
+This document describes intended boundaries only. No application orchestration, persistence, or scientific backend integration is implemented yet.
