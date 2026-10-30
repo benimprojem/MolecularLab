@@ -113,7 +113,7 @@ For each bounded composition, the workflow:
 4. Runs each proposed graph through the optional structure-identification adapter.
 5. Returns one `ForwardDiscoveryResult` containing the composition, diagnostics, reference lookup, graphs, identifiers, and explicit graph-generation status.
 
-The workflow is bounded by `max_compositions`, `max_graphs_per_composition`, and `max_heavy_atoms`. It is lazy through `iter_forward_discovery`; `run_forward_discovery` materializes the bounded results as a tuple.
+The workflow is bounded by `max_compositions`, `max_graphs_per_composition`, `max_heavy_atoms`, and `max_graph_assignments` (the last bounds bond-order combinations examined per composition). It is lazy through `iter_forward_discovery`; `run_forward_discovery` materializes the bounded results as a tuple.
 
 Diagnostics are advisory and do not automatically reject compositions. A composition outside the graph prototype's scope remains visible with `no_graph_within_prototype_scope`; charged and formula-unit records are also retained with explicit statuses rather than being misreported as impossible. Periodic-only searches are rejected because crystal structure generation is not implemented.
 
