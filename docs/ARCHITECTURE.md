@@ -40,7 +40,7 @@ The common solver orchestration contract is implemented in `molecular_lab/engine
 
 The four initial domains are electronic structure, electrical transport, magnetic response, and electromagnetic response. This separation prevents accidental use of a solver outside its physical scope. A solver declaration is not evidence that the executable is installed, and an unavailable backend must never produce a fabricated result.
 
-## Adapter boundary and execution rules
+## Electronic-structure result contract\n\nThe initial electronic-structure records live in molecular_lab/materials/electronic_structure.py. They retain k-point coordinates/weights, spin-resolved band energies, optional occupation arrays, Fermi level, direct and indirect band-edge estimates, and total/projected DOS grids. The band-gap helper reports metallic or undetermined states explicitly when occupations, Fermi-level information, or sampled edges do not support a gap estimate. It does not run DFT, interpolate bands, or establish experimental conductivity. See [ELECTRONIC_STRUCTURE.md](ELECTRONIC_STRUCTURE.md) for schema and limitations.\n\n## Adapter boundary and execution rules
 
 Each optional adapter implements a capability declaration, an availability check, and a run method. Adapter-specific packages are imported only by their adapter modules; the common protocol uses the Python standard library and does not require optional scientific software.
 
@@ -66,6 +66,6 @@ The UI framework, persistence technology, job scheduler, internal unit conventio
 
 ## Implementation status
 
-Implemented: initial offline reference-molecule catalogue and lookup functions; optional RDKit graph-identification adapter; bounded forward-discovery pipeline; material design/target and frequency-dependent response records; criterion-bound electrical behavior screening; and the common solver request/capability/availability/dispatch protocol with unit tests.
+Implemented: initial offline reference-molecule catalogue and lookup functions; optional RDKit graph-identification adapter; bounded forward-discovery pipeline; material design/target and frequency-dependent response records; criterion-bound electrical behavior screening; electronic-structure band/DOS result records with band-edge screening; and the common solver request/capability/availability/dispatch protocol with unit tests.
 
 Not implemented: production adapters for electronic-structure, transport, magnetic, or full-wave electromagnetic solvers; geometry optimization; broad crystal structure generation; stability assessment; job queue/cancellation; and actual material-property calculations.
