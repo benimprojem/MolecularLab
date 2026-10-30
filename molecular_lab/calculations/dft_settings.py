@@ -120,9 +120,9 @@ class SmearingSettings:
 class ConvergenceSettings:
     energy_tolerance_ev: float = 1e-6
     force_tolerance_ev_per_angstrom: float | None = None
-    stress_tolerance_gpa: float | None = None
     max_scf_iterations: int = 100
     density_tolerance: float | None = None
+    stress_tolerance_gpa: float | None = None
 
     def __post_init__(self) -> None:
         values = (self.energy_tolerance_ev, self.force_tolerance_ev_per_angstrom,
