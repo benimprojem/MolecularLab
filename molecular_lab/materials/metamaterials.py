@@ -19,6 +19,65 @@ from typing import Mapping
 from molecular_lab.core.models import EvidenceRecord
 
 
+class MetamaterialPropertyDomain(str, Enum):
+    """Physical response family requested or evaluated for a design."""
+    OPTICAL = "optical"
+    MAGNETIC = "magnetic"
+    ELECTRICAL = "electrical"
+    ELECTRONIC_STRUCTURE = "electronic_structure"
+    MULTIPHYSICS = "multiphysics"
+
+
+class TargetRelation(str, Enum):
+    """How a requested value or interval should be interpreted."""
+    MINIMIZE = "minimize"
+    MAXIMIZE = "maximize"
+    APPROACH = "approach"
+    WITHIN_RANGE = "within_range"
+
+
+@dataclass(frozen=True, slots=True)
+class MetamaterialPropertyTarget:
+    """A measurable property objective with units and optional operating band.
+
+    Values are goals/constraints, not computed results. The metric name and unit
+    are explicit so the same schema can represent conductivity, band gap,
+    permeability, refractive index, optical loss, and related quantities.
+    """
+    domain: MetamaterialPropertyDomain
+    metric: str
+    relation: TargetRelation
+    unit: str
+    target_value: float | None = None
+    minimum: float | None = None
+    maximum: float | None = None
+    spectral_band_m: tuple[float, float] | None = None
+    notes: str = ""
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.domain, MetamaterialPropertyDomain):
+            object.__setattr__(self, "domain", MetamaterialPropertyDomain(self.domain))
+        if not isinstance(self.relation, TargetRelation):
+            object.__setattr__(self, "relation", TargetRelation(self.relation))
+        if not self.metric.strip() or not self.unit.strip():
+            raise ValueError("property metric and unit cannot be empty")
+        values = (self.target_value, self.minimum, self.maximum)
+        if any(value is not None and not isfinite(value) for value in values):
+            raise ValueError("property target values must be finite")
+        if self.relation is TargetRelation.APPROACH and self.target_value is None:
+            raise ValueError("approach relation requires target_value")
+        if self.relation is TargetRelation.WITHIN_RANGE:
+            if self.minimum is None or self.maximum is None or self.minimum > self.maximum:
+                raise ValueError("within_range requires minimum <= maximum")
+        if self.minimum is not None and self.maximum is not None and self.minimum > self.maximum:
+            raise ValueError("minimum cannot exceed maximum")
+        if self.spectral_band_m is not None:
+            band = tuple(self.spectral_band_m)
+            if len(band) != 2 or any(not isfinite(v) or v <= 0 for v in band) or band[0] >= band[1]:
+                raise ValueError("spectral_band_m must be an increasing positive metre interval")
+            object.__setattr__(self, "spectral_band_m", band)
+
+
 class MetamaterialMechanism(str, Enum):
     RESONANT = "resonant"
     GEOMETRIC_PHASE = "geometric_phase"
@@ -82,7 +141,8 @@ class MetamaterialDesign:
     mechanism: MetamaterialMechanism
     unit_cell: MetamaterialUnitCell
     wavelength_band_m: tuple[float, float]
-    target_properties: tuple[str, ...]
+    target_properties: tuple[str, ...] = ()
+    property_targets: tuple[MetamaterialPropertyTarget, ...] = ()
     operating_conditions: Mapping[str, str | float] | None = None
     evidence: tuple[EvidenceRecord, ...] = ()
     limitations: tuple[str, ...] = (
@@ -100,13 +160,17 @@ class MetamaterialDesign:
         if band[0] >= band[1]:
             raise ValueError("wavelength band minimum must be smaller than maximum")
         targets = tuple(self.target_properties)
-        if not targets or any(not target.strip() for target in targets):
-            raise ValueError("at least one non-empty target property is required")
+        property_targets = tuple(self.property_targets)
+        if any(not target.strip() for target in targets):
+            raise ValueError("target property labels cannot be empty")
+        if not targets and not property_targets:
+            raise ValueError("at least one target property or typed property target is required")
         conditions = dict(self.operating_conditions or {})
         if any(not key.strip() for key in conditions):
             raise ValueError("operating condition names cannot be empty")
         object.__setattr__(self, "wavelength_band_m", band)
         object.__setattr__(self, "target_properties", targets)
+        object.__setattr__(self, "property_targets", property_targets)
         object.__setattr__(self, "operating_conditions", MappingProxyType(conditions))
         object.__setattr__(self, "evidence", tuple(self.evidence))
         object.__setattr__(self, "limitations", tuple(self.limitations))
