@@ -3,7 +3,7 @@
 Version: 0.1 | Rev.: 03
 """
 
-from molecular_lab.materials.electrical_classification import (
+from molecular_lab.materials.electronic_structure import (\n    BandChannelData, BandGapAssessment, BandGapStatus, BandStructureData,\n    DensityOfStatesChannel, DensityOfStatesData, KPoint, assess_band_gap,\n)\nfrom molecular_lab.materials.electrical_classification import (
     ElectricalBehavior, ElectricalBehaviorAssessment, ElectricalClassificationCriteria,
     ElectricalMetric, assess_electrical_behavior,
 )
