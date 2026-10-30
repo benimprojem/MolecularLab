@@ -27,6 +27,7 @@ from molecular_lab.core.models import (
     SearchDomain,
 )
 from molecular_lab.database.reference_molecules import (
+    MatchLevel,
     MoleculeLookupResult,
     identify_candidate,
 )
@@ -93,7 +94,17 @@ def iter_forward_discovery(
         processed += 1
 
         diagnostics = assess_composition(composition)
-        reference_lookup = identify_candidate(composition)
+        if composition.kind == CompositionKind.MOLECULAR:
+            reference_lookup = identify_candidate(composition)
+        else:
+            reference_lookup = MoleculeLookupResult(
+                match_level=MatchLevel.NOT_APPLICABLE,
+                matches=(),
+                explanation=(
+                    "The local reference catalogue contains molecular records only; "
+                    "formula-unit compositions require a crystal/material reference database."
+                ),
+            )
 
         if composition.kind != CompositionKind.MOLECULAR:
             graphs: tuple[MolecularGraph, ...] = ()
