@@ -113,3 +113,14 @@ This avoids silently assigning weights to a band index that `bands.x` may
 have reordered near a crossing. The current implementation is non-spin-
 polarized and scalar-relativistic only. It has synthetic/mocked workflow tests;
 real QE validation remains outstanding.
+
+
+## Fat-band plot data
+
+After a successful fat-band BANDS run, pass
+\`DFTExecutionResult.fat_band_structure\`, the original \`BandPath\`, and the
+crystal's direct lattice vectors to \`prepare_fatband_plot_data\`. The result
+contains per-band/per-spin grouped series, reciprocal-space path distances and
+high-symmetry ticks. Element/orbital/atom filters and display-only weight
+normalization are supported. The plotting transformation preserves raw
+projection weights and does not require a GUI or plotting library.
