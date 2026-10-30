@@ -2,7 +2,7 @@
 Conservative composition-level plausibility diagnostics.
 
 Version: 0.1
-Rev.: 00
+Rev.: 01
 Status: Initial heuristic diagnostics; no structure or stability calculations.
 
 The checks in this module are advisory. They must never be interpreted as a
@@ -188,9 +188,14 @@ def _check_oxidation_state_balance(
 
     symbols = tuple(sorted(composition.counts))
     if len(symbols) == 1:
+        if composition.net_charge == 0:
+            return (
+                DiagnosticStatus.SUPPORTED_PATTERN,
+                "Neutral single-element composition: formal elemental oxidation state zero is consistent.",
+            )
         return (
-            DiagnosticStatus.SUPPORTED_PATTERN,
-            "Single-element composition: formal oxidation state zero balances the composition.",
+            DiagnosticStatus.NOT_ASSESSED,
+            "Charged single-element species require atom-level electronic and structural treatment; the neutral elemental-state shortcut does not apply.",
         )
 
     missing = [symbol for symbol in symbols if symbol not in _COMMON_OXIDATION_STATES]
