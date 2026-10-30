@@ -121,3 +121,63 @@ def integrate_pdos_window(
         (x1 - x0) * (y0 + y1) / 2
         for (x0, y0), (x1, y1) in zip(points, points[1:])
     )
+
+
+@dataclass(frozen=True, slots=True)
+class PDOSWindowSummary:
+    """Integrated PDOS weights for one atom/element, l channel and spin."""
+    element: str | None
+    atom_index: int | None
+    angular_momentum: int
+    spin_channel: str
+    lower_ev: float
+    upper_ev: float
+    integrated_local_states: float
+    integrated_component_states: float
+
+    def __post_init__(self):
+        if (self.element is None) == (self.atom_index is None):
+            raise ValueError("summary must identify exactly one element or atom")
+        if self.angular_momentum < 0 or not self.spin_channel.strip():
+            raise ValueError("angular momentum and spin channel must be valid")
+        if (not isfinite(self.lower_ev) or not isfinite(self.upper_ev)
+                or self.lower_ev >= self.upper_ev):
+            raise ValueError("summary energy bounds must be finite and increasing")
+        if (not isfinite(self.integrated_local_states)
+                or not isfinite(self.integrated_component_states)
+                or self.integrated_local_states < 0
+                or self.integrated_component_states < 0):
+            raise ValueError("integrated PDOS values must be finite and non-negative")
+
+
+def summarize_pdos_window(
+    data: ProjectedDensityOfStatesData,
+    lower_ev: float,
+    upper_ev: float,
+    *,
+    group_by: str = "element",
+) -> tuple[PDOSWindowSummary, ...]:
+    """Integrate each aggregated l/spin contribution over an energy interval.
+
+    Returns both the sum of QE local-DOS columns and the sum of angular
+    components. The two are kept separate as a consistency check; neither is
+    assumed to equal the total DOS or to be a complete projector basis.
+    """
+    aggregates = aggregate_projected_dos(data, group_by=group_by)
+    summaries = []
+    for item in aggregates:
+        summaries.append(PDOSWindowSummary(
+            element=item.element,
+            atom_index=item.atom_index,
+            angular_momentum=item.angular_momentum,
+            spin_channel=item.spin_channel,
+            lower_ev=lower_ev,
+            upper_ev=upper_ev,
+            integrated_local_states=integrate_pdos_window(
+                data.energies_ev, item.local_dos_states_per_ev, lower_ev, upper_ev
+            ),
+            integrated_component_states=integrate_pdos_window(
+                data.energies_ev, item.component_dos_states_per_ev, lower_ev, upper_ev
+            ),
+        ))
+    return tuple(summaries)
