@@ -183,10 +183,10 @@ class DFTCalculationSettings:
         if not isinstance(self.convergence, ConvergenceSettings):
             raise TypeError("convergence must be ConvergenceSettings")
         pseudo = dict(self.pseudopotentials)
-        if any(key != value.element for key, value in pseudo.items()):
-            raise ValueError("pseudopotential mapping keys must match their element")
         if any(not isinstance(value, PseudopotentialReference) for value in pseudo.values()):
             raise TypeError("pseudopotentials must contain PseudopotentialReference values")
+        if any(key != value.element for key, value in pseudo.items()):
+            raise ValueError("pseudopotential mapping keys must match their element")
         outputs = tuple(
             item if isinstance(item, DFTOutput) else DFTOutput(item)
             for item in self.requested_outputs
@@ -199,8 +199,6 @@ class DFTCalculationSettings:
             raise ValueError("temperature_kelvin must be finite and non-negative")
         if self.pressure_gpa is not None and not isfinite(self.pressure_gpa):
             raise ValueError("pressure_gpa must be finite")
-        if self.spin_orbit_coupling and not self.spin_polarized:
-            raise ValueError("spin-orbit coupling requires spin-polarized/non-collinear treatment")
         if self.task == DFTTask.BANDS and not self.band_path_ref.strip():
             raise ValueError("BANDS task requires an explicit band_path_ref")
         if self.task != DFTTask.BANDS and self.band_path_ref:
