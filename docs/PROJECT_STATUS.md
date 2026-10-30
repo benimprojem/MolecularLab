@@ -291,3 +291,6 @@ are available. Real QE execution and scientific convergence remain pending.
 
 
 **Structure identity cross-check (2026-10-30):** The QE fat-band execution path now passes the input CrystalStructure into the dataset builder. The builder verifies that projection atom indices cover every input site and that each one-based QE atom index carries the same element as the corresponding input site. Added a regression test for matching and deliberately swapped Fe/O site order. This protects the projection join from a subtle but serious atom-order mismatch; it does not validate the physical correctness of the QE pseudopotential projectors.
+
+
+**Atom-order validation CI (2026-10-30):** The QE workflow now checks projection atom indices and element labels against the exact input crystal-site order. An initial mocked workflow fixture intentionally/accidentally described a second O atom while the crystal fixture contained one Si site; the new validation correctly caught that inconsistency. The fixture was corrected to three projector states on the single Si site. Final CI passed on commit `c7160c80ed28b164a469b68a41b11c3e50d30f82`: RDKit enabled **295 passed, 1 skipped**; without RDKit **290 passed, 6 skipped**. Run: https://github.com/benimprojem/MolecularLab/actions/runs/41107182574.
