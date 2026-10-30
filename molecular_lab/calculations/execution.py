@@ -14,7 +14,7 @@ import shutil
 import subprocess
 from typing import Sequence
 
-from molecular_lab.calculations.ase_bridge import ASEUnavailableError
+from molecular_lab.calculations.ase_bridge import ASEUnavailableError, ase_availability
 from molecular_lab.calculations.dft_settings import (
     DFTCalculationSettings, DFTOutput, DFTTask,
 )
