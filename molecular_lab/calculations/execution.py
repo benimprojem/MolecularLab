@@ -731,6 +731,10 @@ def execute_qe_bands(
                 backend_version=scf_result.backend_version,
                 exchange_correlation=settings.exchange_correlation,
             )
+            if len(original_state_bands.kpoints) != len(band_data.kpoints):
+                raise ValueError(
+                    "projwfc.x and bands.x outputs contain different k-point counts"
+                )
             fat_band_data = build_fatband_dataset(original_state_bands, projection_data)
         except (OSError, ValueError) as exc:
             return DFTExecutionResult(
