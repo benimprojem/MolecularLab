@@ -108,3 +108,36 @@ QE documents `atomic_proj.xml` as the per-state projection file written by
 matrix; it is not required to enable the projection coefficients.
 The `kresolveddos` option produces energy-resolved k-point DOS output and is
 not required for the per-eigenstate fat-band data model.
+
+
+## Plot-ready transformation
+
+\`prepare_fatband_plot_data\` converts a \`FatBandDataset\` into grouped
+\`FatBandPlotSeries\` records without depending on a plotting library.
+
+Supported grouping levels:
+
+- \`atom_orbital\`: one atom and orbital component per series.
+- \`element_orbital\`: sum the same element/orbital over atoms.
+- \`element\`: sum all selected orbital contributions for each element.
+- \`atom\`: sum all selected orbital contributions for each atom.
+- \`orbital\`: sum the selected orbital contribution over atoms.
+
+The transformation supports filters for elements, atom indices, orbital labels,
+spin channels and band indices. A minimum raw-weight threshold can suppress
+small markers while preserving the original value in the plot record.
+
+Display scaling is explicit:
+
+- \`raw\`: display the unscaled projection weight.
+- \`global_max\`: divide all selected display weights by the global maximum.
+- \`per_band_max\`: scale each band/spin group independently.
+
+The source dataset is never modified. Each plot point retains both
+\`raw_weight\` and \`display_weight\`.
+
+The x-axis is a cumulative reciprocal-space path distance in Å⁻¹. It is
+calculated from the fractional k-points, the direct lattice vectors and the
+reciprocal lattice (including the 2π convention). High-symmetry labels and
+their exact path positions are returned as symmetry ticks. The supplied
+\`BandPath\` must match the fat-band k-point sequence exactly.
