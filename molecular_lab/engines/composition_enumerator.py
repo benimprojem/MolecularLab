@@ -2,7 +2,7 @@
 Bounded composition enumeration.
 
 Version: 0.1
-Rev.: 00
+Rev.: 01
 Status: First deterministic enumerator; no chemical plausibility scoring.
 
 This module enumerates element-count combinations inside explicit user bounds.
@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 
+from molecular_lab.chemistry.elements import get_element
 from molecular_lab.core.models import (
     Composition,
     CompositionKind,
@@ -44,6 +45,12 @@ def iter_compositions(
         names = ", ".join(sorted(unknown_required))
         raise ValueError(f"required elements are not allowed: {names}")
 
+    for symbol in constraints.allowed_elements:
+        try:
+            get_element(symbol)
+        except ValueError as exc:
+            raise ValueError(f"unknown allowed element: {symbol}") from exc
+
     elements = tuple(sorted(constraints.allowed_elements))
     limits = tuple(
         min(
@@ -55,6 +62,8 @@ def iter_compositions(
     charges = constraints.allowed_charges
     if charges is None:
         charges = (0,)
+    else:
+        charges = tuple(sorted(set(charges)))
 
     if constraints.domain == SearchDomain.MOLECULE:
         kinds = (CompositionKind.MOLECULAR,)
