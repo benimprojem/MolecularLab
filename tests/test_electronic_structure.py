@@ -65,3 +65,12 @@ def test_dos_validates_grid_and_channel_shapes():
 def test_dos_rejects_negative_density():
     with pytest.raises(ValueError, match="non-negative"):
         DensityOfStatesChannel("total", (0.0, -0.1))
+
+
+def test_partially_occupied_state_at_fermi_level_is_metallic():
+    channel = BandChannelData(
+        "spin-up", ((0.0, 0.1), (-0.5, -0.4)),
+        ((0.5, 0.0), (1.0, 1.0)), maximum_occupation=1.0,
+    )
+    result = assess_band_gap(BandStructureData(_kpoints(), (channel,), fermi_level_ev=0.0))
+    assert result.status is BandGapStatus.METALLIC
