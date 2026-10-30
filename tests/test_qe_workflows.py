@@ -222,7 +222,7 @@ def test_qe_fatband_workflow_runs_projwfc_and_joins_original_state_weights(tmp_p
     def run(executable, input_text, *, workdir, **kwargs):
         if executable == "bands.x":
             (workdir / "molecular_lab.bands.gnu").write_text(
-                "0 -1\\n0.5 -0.8\\n\\n0 1\\n0.5 1.2\\n",
+                "0 -1\n0.5 -0.8\n\n0 1\n0.5 1.2\n",
                 encoding="utf-8",
             )
             stdout = "JOB DONE."
@@ -268,7 +268,7 @@ def test_qe_fatband_workflow_fails_if_atomic_projection_xml_is_missing(tmp_path,
     def run(executable, input_text, *, workdir, **kwargs):
         if executable == "bands.x":
             (workdir / "molecular_lab.bands.gnu").write_text(
-                "0 -1\\n0.5 -0.8\\n\\n0 1\\n0.5 1.2\\n",
+                "0 -1\n0.5 -0.8\n\n0 1\n0.5 1.2\n",
                 encoding="utf-8",
             )
         return SimpleNamespace(returncode=0, stdout="JOB DONE.", stderr=""), None
