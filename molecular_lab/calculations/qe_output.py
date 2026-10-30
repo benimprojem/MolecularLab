@@ -126,8 +126,8 @@ def read_qe_total_dos(path: str | Path, **kwargs) -> DensityOfStatesData:
 
 
 _QE_PDOS_FILE_RE = re.compile(
-    r"^.+\\.pdos_atm#(?P<atom>\\d+)\\((?P<element>[^)]+)\\)"
-    r"_wfc#(?P<wfc>\\d+)\\((?P<orbital>[spdf])\\)$",
+    r"^.+\.pdos_atm#(?P<atom>\d+)\((?P<element>[^)]+)\)"
+    r"_wfc#(?P<wfc>\d+)\((?P<orbital>[spdf])\)$",
     re.IGNORECASE,
 )
 
