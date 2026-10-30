@@ -68,7 +68,11 @@ def build_silicon(a: float) -> CrystalStructure:
 
 
 def build_silicon_band_path(points_per_segment: int) -> BandPath:
-    if isinstance(points_per_segment, bool) or points_per_segment < 1:
+    if (
+        isinstance(points_per_segment, bool)
+        or not isinstance(points_per_segment, int)
+        or points_per_segment < 1
+    ):
         raise ValueError("points_per_segment must be a positive integer")
     return BandPath((
         BandPathPoint((0.0, 0.0, 0.0), "Γ", points_per_segment),
