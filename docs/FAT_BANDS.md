@@ -69,3 +69,40 @@ This first implementation supports collinear scalar-relativistic projections.
 Fully relativistic j-resolved and non-collinear/spinor formats, band
 interpolation, and automatic verification of k-point coordinate identity
 remain unsupported.
+
+
+## Execution workflow
+
+A BANDS request opts into fat-band output by including
+\`DFTOutput.FAT_BAND_STRUCTURE\` in \`requested_outputs\`. The QE runner then
+executes:
+
+1. SCF with \`pw.x\`.
+2. The structured high-symmetry path with \`pw.x\` using \`calculation='bands'\`.
+3. \`bands.x\` to produce the conventional \`.gnu\` band representation.
+4. \`projwfc.x\` on the same saved BANDS wavefunctions.
+5. Read \`tmp/molecular_lab.save/atomic_proj.xml\` and the state metadata/eigenvalue
+   records printed by \`projwfc.x\`.
+6. Build the \`FatBandDataset\` from the original QE eigenstate sequence.
+
+The standard \`band_structure\` result is still populated from \`bands.x\`.
+The fat-band energies are deliberately taken from the \`projwfc.x\) eigenstate
+output, not copied from \`bands.x\` reordered curves. QE's \`bands.x\` can reorder
+states to improve band continuity; raw projection coefficients are indexed by
+the original \`pw.x\` state ordering. Pairing those arrays solely by a reordered
+band number can assign an orbital weight to the wrong energy at a crossing.
+The two representations are therefore kept distinct until a state-tracking
+layer can establish a verified mapping.
+
+The current runner supports non-spin-polarized scalar projections only.
+Spin-polarized BANDS, SOC/spinor data and fully relativistic j-resolved
+projections remain unavailable. The automated workflow tests use synthetic XML
+and mocked executables; a real QE reference calculation is still required.
+
+## Projection output source
+
+QE documents \`atomic_proj.xml\` as the per-state projection file written by
+\`projwfc.x\`. The \`lwrite_overlaps\` option adds the atomic-orbital overlap
+matrix; it is not required to enable the projection coefficients.
+The \`kresolveddos\` option produces energy-resolved k-point DOS output and is
+not required for the per-eigenstate fat-band data model.
