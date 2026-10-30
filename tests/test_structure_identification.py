@@ -73,7 +73,22 @@ def test_benzene_is_reported_as_aromatic_when_rdkit_is_available():
     pytest.importorskip("rdkit")
     from molecular_lab.engines.molecular_graphs import iter_unicyclic_graphs
 
-    graph = next(iter_unicyclic_graphs(parse_formula("C6H6"), max_candidates=20))
+    candidates = iter_unicyclic_graphs(
+        parse_formula("C6H6"), max_candidates=1000, max_assignments=100000
+    )
+    graph = next(
+        candidate for candidate in candidates
+        if all(
+            sum(
+                1 for bond in candidate.bonds
+                if bond.order == 2
+                and atom.atom_id in (bond.atom_a, bond.atom_b)
+            ) == 1
+            for atom in candidate.atoms if atom.element == "C"
+        )
+        and all(bond.order in (1, 2) for bond in candidate.bonds
+                if bond.atom_a < 6 and bond.atom_b < 6)
+    )
     result = structure_identification.identify_graph_against_catalogue(graph)
     assert result.status == "identified"
     assert result.aromaticity_status == "aromatic_detected"
