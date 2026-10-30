@@ -63,6 +63,8 @@ def scf_success():
 
 
 def patch_scf(monkeypatch, result=None):
+    # Existing workflow tests isolate the stages after prerequisite SCF.
+    monkeypatch.setattr(execution, "_preflight_qe_bands", lambda *args, **kwargs: None)
     monkeypatch.setattr(
         execution, "execute_quantum_espresso",
         lambda *args, **kwargs: result or scf_success(),
@@ -280,3 +282,78 @@ def test_qe_fatband_workflow_fails_if_atomic_projection_xml_is_missing(tmp_path,
     result = execute_qe_bands(crystal(), settings, working_directory=tmp_path)
     assert result.status is DFTExecutionStatus.FAILED
     assert "atomic_proj.xml" in result.message
+
+
+
+def test_qe_fatband_preflight_detects_missing_projwfc_before_scf(tmp_path, monkeypatch):
+    from dataclasses import replace
+
+    settings = replace(
+        bands_settings(),
+        requested_outputs=(DFTOutput.BAND_STRUCTURE, DFTOutput.FAT_BAND_STRUCTURE),
+    )
+    (tmp_path / "pseudo").mkdir()
+    (tmp_path / "pseudo" / "Si.UPF").write_text("test pseudo", encoding="utf-8")
+    monkeypatch.setattr(execution, "ase_availability", lambda: (True, ""))
+    monkeypatch.setattr(
+        execution, "_resolve_qe_executable",
+        lambda name: None if name == "projwfc-missing" else f"/fake/{name}",
+    )
+    scf_called = []
+    monkeypatch.setattr(
+        execution, "execute_quantum_espresso",
+        lambda *args, **kwargs: scf_called.append(True) or scf_success(),
+    )
+
+    result = execute_qe_bands(
+        crystal(), settings, working_directory=tmp_path,
+        projwfc_executable="projwfc-missing",
+    )
+
+    assert result.status is DFTExecutionStatus.BACKEND_UNAVAILABLE
+    assert "projwfc.x executable was not found" in result.message
+    assert "no calculation was started" in result.message
+    assert scf_called == []
+
+
+def test_qe_bands_preflight_reports_missing_pseudopotential(tmp_path, monkeypatch):
+    monkeypatch.setattr(execution, "ase_availability", lambda: (True, ""))
+    monkeypatch.setattr(
+        execution, "_resolve_qe_executable",
+        lambda name: f"/fake/{name}",
+    )
+    (tmp_path / "pseudo").mkdir()
+
+    result = execution._preflight_qe_bands(
+        crystal(), bands_settings(),
+        working_directory=tmp_path,
+        executable="pw.x",
+        bands_executable="bands.x",
+        projwfc_executable="projwfc.x",
+        wants_fatband=False,
+    )
+
+    assert result is not None
+    assert result.status is DFTExecutionStatus.BACKEND_UNAVAILABLE
+    assert "Missing Si pseudopotential" in result.message
+
+
+def test_qe_bands_preflight_does_not_require_projwfc_for_plain_bands(tmp_path, monkeypatch):
+    monkeypatch.setattr(execution, "ase_availability", lambda: (True, ""))
+    monkeypatch.setattr(
+        execution, "_resolve_qe_executable",
+        lambda name: f"/fake/{name}",
+    )
+    (tmp_path / "pseudo").mkdir()
+    (tmp_path / "pseudo" / "Si.UPF").write_text("test pseudo", encoding="utf-8")
+
+    result = execution._preflight_qe_bands(
+        crystal(), bands_settings(),
+        working_directory=tmp_path,
+        executable="pw.x",
+        bands_executable="bands.x",
+        projwfc_executable="projwfc-missing",
+        wants_fatband=False,
+    )
+
+    assert result is None
