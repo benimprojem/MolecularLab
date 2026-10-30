@@ -15,6 +15,7 @@ from molecular_lab.calculations.fatband_plot import (
     FatBandPlotData, FatBandPlotPoint, FatBandPlotSeries, FatBandSymmetryTick,
     prepare_fatband_plot_data,
 )
+from molecular_lab.calculations.fatband_svg import render_fatband_svg
 
 from molecular_lab.calculations.pdos_analysis import (
     BandEdgePDOSAnalysis, PDOSWindowSummary, ProjectedDOSAggregate,
@@ -60,6 +61,7 @@ __all__ = [
     "FatBandContribution", "FatBandDataset", "FatBandPoint", "build_fatband_dataset",
     "FatBandPlotData", "FatBandPlotPoint", "FatBandPlotSeries", "FatBandSymmetryTick",
     "prepare_fatband_plot_data",
+    "render_fatband_svg",
     "BandEdgePDOSAnalysis", "PDOSWindowSummary", "ProjectedDOSAggregate",
     "aggregate_projected_dos", "analyze_band_edge_pdos",
     "integrate_pdos_window", "summarize_pdos_window",
