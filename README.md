@@ -9,7 +9,7 @@ Status: Early foundation with initial calculation orchestration contracts
 
 **Molecular Lab** is a planned Windows desktop environment for exploring molecules, compounds, crystals, and functional materials through computational chemistry and materials-science workflows.
 
-> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, a bounded composition enumerator, advisory composition diagnostics, restricted bond-order-aware acyclic and unicyclic molecular graph prototypes, registered fused-benzenoid graph prototypes including anthracene and phenanthrene, a small offline reference-molecule catalogue, an optional RDKit graph-identification adapter, and an integrated bounded forward-discovery pipeline. Material design/target records, frequency-dependent complex response records, explicit-criterion electrical behavior screening, and a common calculation-solver orchestration protocol are also implemented. These are data and software contracts, not evidence that external scientific solvers have run. General structure generation beyond the bounded prototypes, geometry optimization, stability assessment, production solver adapters, and actual material-property calculations are not implemented yet.
+> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, a bounded composition enumerator, advisory composition diagnostics, restricted bond-order-aware acyclic and unicyclic molecular graph prototypes, registered fused-benzenoid graph prototypes including anthracene and phenanthrene, a small offline reference-molecule catalogue, an optional RDKit graph-identification adapter, and an integrated bounded forward-discovery pipeline. Material design/target records, frequency-dependent complex response records, explicit-criterion electrical behavior screening, spin-resolved band-structure and DOS result models with direct/indirect gap screening, and a common solver orchestration protocol carrying structured electronic outputs are also implemented. These are data and software contracts, not evidence that external scientific solvers have run. General structure generation beyond the bounded prototypes, geometry optimization, stability assessment, production solver adapters, and actual material-property calculations are not implemented yet.
 
 ## 1. Project goal
 
@@ -63,7 +63,7 @@ The initial common solver orchestration contract lives in `molecular_lab/engines
 
 Each backend must declare the domains and methods it supports and report whether its software is actually available. The registry dispatches only compatible requests and returns explicit unsupported/unavailable/failed states rather than fabricating outputs.
 
-The protocol is an orchestration foundation only. Production solver adapters, job scheduling, cancellation, and physical calculations remain future work. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/METAMATERIALS.md](docs/METAMATERIALS.md).
+The protocol is an orchestration foundation only. Production solver adapters, job scheduling, cancellation, and physical calculations remain future work. Electronic-structure result schemas and their limits are described in [docs/ELECTRONIC_STRUCTURE.md](docs/ELECTRONIC_STRUCTURE.md). See also [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/METAMATERIALS.md](docs/METAMATERIALS.md).
 
 ## 5. Large systems and metamaterials
 
