@@ -173,6 +173,84 @@ class DensityOfStatesChannel:
             raise ValueError("DOS values must be finite and non-negative")
         object.__setattr__(self, "density_states_per_ev", values)
 
+
+@dataclass(frozen=True, slots=True)
+class ProjectedDOSComponent:
+    """One angular component of an atomic-orbital projected DOS."""
+    component_index: int
+    component_label: str
+    density_states_per_ev: tuple[float, ...]
+
+    def __post_init__(self):
+        values = tuple(self.density_states_per_ev)
+        if isinstance(self.component_index, bool) or self.component_index < 0:
+            raise ValueError("component_index must be a non-negative integer")
+        if not self.component_label.strip() or not values:
+            raise ValueError("projected component requires a label and values")
+        if any(not isfinite(v) or v < 0 for v in values):
+            raise ValueError("projected DOS values must be finite and non-negative")
+        object.__setattr__(self, "density_states_per_ev", values)
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectedDOSRecord:
+    """PDOS for one atom, one pseudopotential atomic wavefunction and spin."""
+    atom_index: int
+    element: str
+    wavefunction_index: int
+    angular_momentum: int
+    spin_channel: str
+    local_dos_states_per_ev: tuple[float, ...]
+    components: tuple[ProjectedDOSComponent, ...]
+
+    def __post_init__(self):
+        if isinstance(self.atom_index, bool) or self.atom_index < 1:
+            raise ValueError("atom_index must be positive (QE uses one-based indices)")
+        if not self.element.strip() or not self.spin_channel.strip():
+            raise ValueError("element and spin_channel cannot be empty")
+        if isinstance(self.wavefunction_index, bool) or self.wavefunction_index < 1:
+            raise ValueError("wavefunction_index must be positive")
+        if isinstance(self.angular_momentum, bool) or self.angular_momentum < 0:
+            raise ValueError("angular_momentum must be non-negative")
+        local = tuple(self.local_dos_states_per_ev)
+        components = tuple(self.components)
+        if not local or len(components) != 2 * self.angular_momentum + 1:
+            raise ValueError("PDOS component count must equal 2*l+1")
+        if any(not isfinite(v) or v < 0 for v in local):
+            raise ValueError("local DOS values must be finite and non-negative")
+        if any(len(item.density_states_per_ev) != len(local) for item in components):
+            raise ValueError("all projected components must share the local DOS grid")
+        object.__setattr__(self, "local_dos_states_per_ev", local)
+        object.__setattr__(self, "components", components)
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectedDensityOfStatesData:
+    """Atom- and orbital-resolved DOS; values are in states/eV."""
+    energies_ev: tuple[float, ...]
+    records: tuple[ProjectedDOSRecord, ...]
+    fermi_level_ev: float | None = None
+    method: str = ""
+    backend: str = ""
+    backend_version: str = ""
+    notes: tuple[str, ...] = ()
+
+    def __post_init__(self):
+        energies, records = tuple(self.energies_ev), tuple(self.records)
+        if len(energies) < 2 or any(not isfinite(v) for v in energies):
+            raise ValueError("PDOS energy grid requires at least two finite values")
+        if any(b <= a for a, b in zip(energies, energies[1:])):
+            raise ValueError("PDOS energy grid must be strictly increasing")
+        if not records:
+            raise ValueError("PDOS requires at least one atom/orbital record")
+        if any(len(record.local_dos_states_per_ev) != len(energies) for record in records):
+            raise ValueError("PDOS records must match the shared energy grid")
+        if self.fermi_level_ev is not None and not isfinite(self.fermi_level_ev):
+            raise ValueError("Fermi level must be finite")
+        object.__setattr__(self, "energies_ev", energies)
+        object.__setattr__(self, "records", records)
+        object.__setattr__(self, "notes", tuple(self.notes))
+
 @dataclass(frozen=True, slots=True)
 class DensityOfStatesData:
     energies_ev: tuple[float, ...]
