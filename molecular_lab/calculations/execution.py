@@ -805,7 +805,7 @@ def execute_qe_bands(
                 raise ValueError(
                     "projwfc.x and bands.x outputs contain different k-point counts"
                 )
-            fat_band_data = build_fatband_dataset(original_state_bands, projection_data)
+            fat_band_data = build_fatband_dataset(original_state_bands, projection_data, structure=structure)
         except (OSError, ValueError) as exc:
             return DFTExecutionResult(
                 "quantum_espresso", DFTExecutionStatus.FAILED,
