@@ -147,7 +147,7 @@ MolecularLab/
 - [x] Define the two discovery directions.
 - [x] Document the scientific scope and development principles.
 - [x] Define the initial shared domain data contract and foundational Python records.
-- [ ] Implement element and formula data handling.
+- [x] Add the 118-element identity table and initial formula parser (syntax tests added; execution verification pending).
 - [ ] Implement bounded candidate-composition generation.
 - [ ] Add structure generation and validation.
 - [ ] Integrate the first calculation backend.
@@ -157,4 +157,4 @@ Version **1.0** will be reserved for the first complete, usable release. Documen
 
 ## 10. License and citation
 
-A project license and citation policy have not yet been selected. Until they are added, do not assume that the repository grants permissions beyond the rights provided by applicable law.
+This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for the complete license text. The copyright notice currently uses the GitHub repository owner identifier `benimprojem`.
