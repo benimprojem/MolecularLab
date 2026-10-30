@@ -23,7 +23,7 @@ _LIMITATIONS = (
     "Neutral species only; charged and radical states are not generated.",
     "Fixed common valences are used for H, C, N, O, F, and Cl only.",
     "Acyclic and unicyclic connected heavy-atom skeletons are supported by separate generators; fused and multi-ring systems remain outside scope.",
-    "Aromaticity, resonance, hypervalence, coordination chemistry, and variable valence are outside scope.",
+    "Aromaticity is not an explicit graph bond type; optional RDKit perception is limited to supported Kekule graphs. General resonance enumeration, hypervalence, coordination chemistry, and variable valence are outside scope.",
     "A graph proposal is not a 3D geometry, stability result, or synthesis prediction.",
 )
 
