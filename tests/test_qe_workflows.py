@@ -92,7 +92,7 @@ def test_qe_bands_workflow_runs_prerequisite_and_parses_output(tmp_path, monkeyp
             )
         return SimpleNamespace(
             returncode=0, stdout="JOB DONE.", stderr="",
-        )
+        ), None
 
     monkeypatch.setattr(execution, "_run_qe_input", run)
     result = execute_qe_bands(crystal(), bands_settings(), working_directory=tmp_path)
