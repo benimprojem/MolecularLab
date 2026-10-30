@@ -61,7 +61,7 @@ def test_kpoint_mesh_requires_three_positive_integers():
 
 def test_nonperiodic_axis_requires_single_kpoint():
     slab = crystal((True, True, False))
-    settings(kpoint_mesh=KPointMesh((6, 6, 2))).validate_for_structure(slab)
+    settings(kpoint_mesh=KPointMesh((6, 6, 1))).validate_for_structure(slab)
     with pytest.raises(ValueError, match="non-periodic axis 2"):
         settings().validate_for_structure(slab)
 
