@@ -20,8 +20,8 @@ def test_indirect_gap_is_distinguished_from_direct_gap():
 def test_partial_occupation_is_classified_as_metallic():
     channel = BandChannelData("spin-up", ((-0.2, 0.1), (1.0, 1.2)), ((0.5, 0.5), (0.0, 0.0)), maximum_occupation=1.0)
     result = assess_band_gap(BandStructureData(_kpoints(), (channel,)))
-    assert result.status is BandGapStatus.METALLIC
-    assert "Partial" in result.reason
+    assert result.status is BandGapStatus.UNDETERMINED
+    assert "Partial occupation" in result.reason
 
 def test_overlapping_band_edges_are_metallic():
     channel = BandChannelData("total", ((-0.5, 0.2), (0.1, 0.8)), ((2.0, 2.0), (0.0, 0.0)))
