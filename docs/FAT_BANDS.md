@@ -259,3 +259,8 @@ reference band structure.
 `SYSTEM` card. The adapter validates that it is not below
 `energy_cutoff`. The application deliberately does not guess a default ratio:
 use the recommendation for the selected pseudopotential.
+
+
+## Projection-weight diagnostics
+
+`diagnose_fatband_projection_weights()` can report states with effectively zero total projected weight and totals or individual atom/orbital contributions above caller-selected advisory thresholds. Defaults are 1e-12 for the zero threshold and 1.0 for the high thresholds. These are review flags, not universal physical bounds: projector sets may be incomplete or non-orthogonal, and raw values are never normalized or modified by the diagnostic.
