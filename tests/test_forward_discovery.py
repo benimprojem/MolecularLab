@@ -52,7 +52,7 @@ def test_hydrogen_oxygen_search_runs_composition_to_graph_pipeline(monkeypatch):
     assert len(peroxide.graph_identifications) == 1
 
 
-def test_formula_matches_are_reported_even_when_no_graph_is_proposed(monkeypatch):
+def test_formula_matches_are_reported_alongside_graph_proposals(monkeypatch):
     from molecular_lab.engines import structure_identification
 
     monkeypatch.setattr(structure_identification, "_load_rdkit", lambda: None)
@@ -93,6 +93,7 @@ def test_periodic_formula_unit_is_not_sent_to_molecular_graph_generator():
     )
     assert periodic.graphs == ()
     assert periodic.graph_generation_status == "not_attempted_non_molecular"
+    assert periodic.reference_lookup.match_level.value == "not_applicable"
 
 
 def test_charged_compositions_are_visible_but_not_graph_generated():
