@@ -9,7 +9,7 @@ Status: Initial project foundation
 
 **Molecular Lab** is a planned Windows desktop environment for exploring molecules, compounds, crystals, and functional materials through computational chemistry and materials-science workflows.
 
-> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, a bounded composition enumerator, and initial advisory composition diagnostics. Structure generation, geometry optimization, stability assessment, and material-property calculations are not implemented yet.
+> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, a bounded composition enumerator, advisory composition diagnostics, a restricted molecular graph prototype, and a small offline reference-molecule catalogue. General structure generation, geometry optimization, stability assessment, and material-property calculations are not implemented yet.
 
 ## 1. Project goal
 
@@ -151,7 +151,9 @@ MolecularLab/
 - [x] Define the initial shared domain data contract and foundational Python records.
 - [x] Add the 118-element identity table and initial formula parser (syntax tests added; execution verification pending).
 - [x] Implement bounded, deterministic composition enumeration (chemical plausibility filtering remains pending).
-- [x] Add initial composition-level electron-count and limited oxidation-state diagnostics (advisory only).\n- [ ] Add structure generation and validation.
+- [x] Add initial composition-level electron-count and limited oxidation-state diagnostics (advisory only).
+- [x] Add a small offline reference-molecule catalogue with formula, synonym, and InChIKey lookup.\n- [ ] Expand structure generation and validation beyond the restricted prototype.
+- [ ] Add optional PubChem synchronization/import with rate limits, caching, and provenance retention.
 - [ ] Integrate the first calculation backend.
 - [ ] Build the first usable desktop workflow.
 
