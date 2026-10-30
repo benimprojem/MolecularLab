@@ -119,8 +119,8 @@ class BandPathPoint:
             raise ValueError("band-path coordinates must contain three finite values")
         if not self.label.strip():
             raise ValueError("band-path point label cannot be empty")
-        if isinstance(self.points_to_next, bool) or not isinstance(self.points_to_next, int) or self.points_to_next < 1:
-            raise ValueError("points_to_next must be a positive integer")
+        if isinstance(self.points_to_next, bool) or not isinstance(self.points_to_next, int) or self.points_to_next < 0:
+            raise ValueError("points_to_next must be a non-negative integer")
         object.__setattr__(self, "coordinates", coordinates)
 
 
@@ -136,6 +136,10 @@ class BandPath:
             raise ValueError("band path requires at least two BandPathPoint values")
         if self.coordinate_system != "crystal":
             raise ValueError("only fractional crystal reciprocal coordinates are supported")
+        if any(point.points_to_next < 1 for point in points[:-1]):
+            raise ValueError("every non-final band-path point needs a positive segment subdivision count")
+        if points[-1].points_to_next != 0:
+            raise ValueError("the final band-path point must use points_to_next=0")
         object.__setattr__(self, "points", points)
 
     @property
