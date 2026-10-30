@@ -13,9 +13,9 @@ def test_indirect_gap_is_distinguished_from_direct_gap():
     result = assess_band_gap(BandStructureData(_kpoints(), (channel,)))
     assert result.status is BandGapStatus.GAP
     assert result.indirect_gap_ev == pytest.approx(1.1)
-    assert result.direct_gap_ev == pytest.approx(1.1)
+    assert result.direct_gap_ev == pytest.approx(1.6)
     assert result.vbm_kpoint_index == 1
-    assert result.cbm_kpoint_index == 1
+    assert result.cbm_kpoint_index == 0
 
 def test_partial_occupation_is_classified_as_metallic():
     channel = BandChannelData("spin-up", ((-0.2, 0.1), (1.0, 1.2)), ((0.5, 0.5), (0.0, 0.0)), maximum_occupation=1.0)
