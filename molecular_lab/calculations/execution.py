@@ -21,6 +21,7 @@ from molecular_lab.calculations.dft_settings import (
 from molecular_lab.calculations.quantum_espresso import (
     prepare_pw_input, prepare_qe_bands_postprocess_input,
     prepare_qe_dos_postprocess_input, prepare_qe_projected_dos_postprocess_input,
+    prepare_qe_fatband_projection_input,
 )
 from molecular_lab.calculations.qe_output import (
     QEOutputParseError, parse_qe_bands_gnu, parse_qe_fermi_level,
@@ -29,6 +30,10 @@ from molecular_lab.calculations.qe_output import (
 from molecular_lab.materials.electronic_structure import (
     BandStructureData, DensityOfStatesData, ProjectedDensityOfStatesData,
 )
+from molecular_lab.calculations.qe_projection import (
+    parse_qe_atomic_proj_xml, parse_qe_projwfc_band_output,
+)
+from molecular_lab.calculations.fatband import FatBandDataset, build_fatband_dataset
 from molecular_lab.structures.crystal import CrystalSite, CrystalStructure
 
 
@@ -57,6 +62,7 @@ class DFTExecutionResult:
     band_structure: BandStructureData | None = None
     density_of_states: DensityOfStatesData | None = None
     projected_density_of_states: ProjectedDensityOfStatesData | None = None
+    fat_band_structure: FatBandDataset | None = None
 
     @property
     def succeeded(self) -> bool:
@@ -601,11 +607,12 @@ def execute_qe_bands(
     working_directory: str | Path,
     executable: str = "pw.x",
     bands_executable: str = "bands.x",
+    projwfc_executable: str = "projwfc.x",
     timeout_seconds: float = 3600.0,
     command_prefix: Sequence[str] = (),
     output_file: str = "molecular_lab.bands",
 ) -> DFTExecutionResult:
-    """Execute SCF -> pw.x BANDS -> bands.x and parse the .gnu result."""
+    """Execute SCF -> pw.x BANDS -> bands.x and optional projwfc.x fat bands."""
     if settings.task is not DFTTask.BANDS or settings.band_path is None:
         raise ValueError("execute_qe_bands requires BANDS settings with a structured BandPath")
     if settings.spin_polarized:
@@ -613,6 +620,7 @@ def execute_qe_bands(
             "quantum_espresso", DFTExecutionStatus.BACKEND_UNAVAILABLE,
             "Spin-polarized BANDS execution is not yet supported by the common QE workflow.",
         )
+    wants_fatband = DFTOutput.FAT_BAND_STRUCTURE in settings.requested_outputs
     workdir = Path(working_directory).expanduser().resolve()
     if not workdir.is_dir():
         raise ValueError("working_directory must be an existing directory")
@@ -631,6 +639,10 @@ def execute_qe_bands(
         bands_input = prepare_pw_input(structure, settings, outdir="./tmp", pseudo_dir="./pseudo")
         post_input = prepare_qe_bands_postprocess_input(
             settings, output_file=output_file,
+        )
+        projection_input = (
+            prepare_qe_fatband_projection_input(settings)
+            if wants_fatband else None
         )
     except Exception as exc:
         return DFTExecutionResult(
@@ -663,9 +675,10 @@ def execute_qe_bands(
             stderr=(bands_run.stderr or "") + (post_run.stderr or ""),
         )
     try:
+        fermi_level = parse_qe_fermi_level(scf_result.stdout)
         band_data = parse_qe_bands_gnu(
             gnu_path.read_text(encoding="utf-8"),
-            fermi_level_ev=parse_qe_fermi_level(scf_result.stdout),
+            fermi_level_ev=fermi_level,
             backend_version=scf_result.backend_version,
             exchange_correlation=settings.exchange_correlation,
         )
@@ -676,15 +689,62 @@ def execute_qe_bands(
             total_energy_ev=scf_result.total_energy_ev,
             backend_version=scf_result.backend_version,
         )
+
+    fat_band_data = None
+    if wants_fatband:
+        projection_run, error = _run_qe_input(
+            projwfc_executable, projection_input.input_text, workdir=workdir,
+            timeout_seconds=timeout_seconds, command_prefix=command_prefix,
+        )
+        if error is not None:
+            return replace(error, message="BANDS workflow stopped at projwfc.x stage: " + error.message)
+        projection_xml = workdir / "tmp" / "molecular_lab.save" / "atomic_proj.xml"
+        if not projection_xml.is_file():
+            return DFTExecutionResult(
+                "quantum_espresso", DFTExecutionStatus.FAILED,
+                "projwfc.x completed but atomic_proj.xml was not found at tmp/molecular_lab.save/atomic_proj.xml.",
+                total_energy_ev=scf_result.total_energy_ev,
+                backend_version=scf_result.backend_version,
+                stdout=(scf_result.stdout or "") + (bands_run.stdout or "")
+                    + (post_run.stdout or "") + (projection_run.stdout or ""),
+                stderr=(bands_run.stderr or "") + (post_run.stderr or "")
+                    + (projection_run.stderr or ""),
+            )
+        try:
+            projection_data = parse_qe_atomic_proj_xml(
+                projection_xml.read_text(encoding="utf-8"),
+                projection_run.stdout or "",
+            )
+            original_state_bands = parse_qe_projwfc_band_output(
+                projection_run.stdout or "",
+                fermi_level_ev=fermi_level,
+                backend_version=scf_result.backend_version,
+                exchange_correlation=settings.exchange_correlation,
+            )
+            fat_band_data = build_fatband_dataset(original_state_bands, projection_data)
+        except (OSError, ValueError) as exc:
+            return DFTExecutionResult(
+                "quantum_espresso", DFTExecutionStatus.FAILED,
+                f"Fat-band projection parsing/join failed: {exc}",
+                total_energy_ev=scf_result.total_energy_ev,
+                backend_version=scf_result.backend_version,
+                stdout=(scf_result.stdout or "") + (bands_run.stdout or "")
+                    + (post_run.stdout or "") + (projection_run.stdout or ""),
+                stderr=(bands_run.stderr or "") + (post_run.stderr or "")
+                    + (projection_run.stderr or ""),
+            )
+
     return DFTExecutionResult(
         "quantum_espresso", DFTExecutionStatus.SUCCEEDED,
-        "QE SCF, BANDS and bands.x stages completed; band data were parsed.",
+        "QE SCF, BANDS and bands.x stages completed; band data were parsed."
+            + (" Original-state projwfc.x projections were joined into fat-band data." if wants_fatband else ""),
         total_energy_ev=scf_result.total_energy_ev, converged=True,
         return_code=post_run.returncode,
         backend_version=scf_result.backend_version,
         stdout=(scf_result.stdout or "") + (bands_run.stdout or "") + (post_run.stdout or ""),
         stderr=(bands_run.stderr or "") + (post_run.stderr or ""),
         band_structure=band_data,
+        fat_band_structure=fat_band_data,
     )
 
 
@@ -838,6 +898,8 @@ def execute_dft_calculation(
     timeout_seconds: float = 3600.0,
     command_prefix: Sequence[str] = (),
     log_file: str | Path | None = None,
+    bands_executable: str = "bands.x",
+    projwfc_executable: str = "projwfc.x",
 ) -> DFTExecutionResult:
     """Common user-facing entry point dispatching to a selected DFT backend."""
     backend_key = backend.strip().lower()
@@ -847,8 +909,9 @@ def execute_dft_calculation(
                 raise ValueError("working_directory is required for Quantum ESPRESSO")
             return execute_qe_bands(
                 structure, settings, working_directory=working_directory,
-                executable=executable, timeout_seconds=timeout_seconds,
-                command_prefix=command_prefix,
+                executable=executable, bands_executable=bands_executable,
+                projwfc_executable=projwfc_executable,
+                timeout_seconds=timeout_seconds, command_prefix=command_prefix,
             )
         if settings.task is DFTTask.DOS:
             if working_directory is None:
