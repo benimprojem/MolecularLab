@@ -9,7 +9,9 @@ from molecular_lab.calculations.qe_projection import (
     parse_qe_projwfc_band_output,
 )
 from molecular_lab.calculations.fatband import (
-    FatBandContribution, FatBandDataset, FatBandPoint, build_fatband_dataset,
+    FatBandContribution, FatBandDataset, FatBandPoint, FatBandProjectionWarning,
+    build_fatband_dataset, diagnose_fatband_projection_weights,
+    validate_band_energy_spectra,
 )
 from molecular_lab.calculations.fatband_plot import (
     FatBandPlotData, FatBandPlotPoint, FatBandPlotSeries, FatBandSymmetryTick,
@@ -58,7 +60,9 @@ __all__ = [
     "AtomicWavefunction", "QEAtomicProjectionCoefficient", "QEAtomicProjectionData",
     "QEProjectionParseError", "parse_qe_atomic_proj_xml", "read_qe_atomic_proj_xml",
     "parse_qe_projwfc_band_output",
-    "FatBandContribution", "FatBandDataset", "FatBandPoint", "build_fatband_dataset",
+    "FatBandContribution", "FatBandDataset", "FatBandPoint", "FatBandProjectionWarning",
+    "build_fatband_dataset", "diagnose_fatband_projection_weights",
+    "validate_band_energy_spectra",
     "FatBandPlotData", "FatBandPlotPoint", "FatBandPlotSeries", "FatBandSymmetryTick",
     "prepare_fatband_plot_data",
     "render_fatband_svg",
