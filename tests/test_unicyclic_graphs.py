@@ -25,6 +25,7 @@ def heavy_graph_cycle_rank(graph):
 def test_cyclopropane_ring_is_generated():
     graphs = list(iter_unicyclic_graphs(parse_formula("C3H6")))
     assert graphs
+    assert len(graphs) == 1
     assert all(heavy_graph_cycle_rank(graph) == 1 for graph in graphs)
     assert any(
         Counter(atom.element for atom in graph.atoms) == Counter({"C": 3, "H": 6})
