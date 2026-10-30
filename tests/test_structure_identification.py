@@ -67,3 +67,14 @@ def test_missing_formula_match_is_not_claimed_to_be_new(monkeypatch):
 
     assert result.match_level.value == "not_found"
     assert "does not prove" in result.explanation
+
+
+def test_benzene_is_reported_as_aromatic_when_rdkit_is_available():
+    pytest.importorskip("rdkit")
+    from molecular_lab.engines.molecular_graphs import iter_unicyclic_graphs
+
+    graph = next(iter_unicyclic_graphs(parse_formula("C6H6"), max_candidates=20))
+    result = structure_identification.identify_graph_against_catalogue(graph)
+    assert result.status == "identified"
+    assert result.aromaticity_status == "aromatic_detected"
+    assert "c1ccccc1" in result.canonical_smiles
