@@ -1,7 +1,7 @@
 <!--
 Project: Molecular Lab
 Version: 0.1
-Rev.: 14
+Rev.: 15
 Status: Early foundation with initial calculation orchestration contracts
 -->
 
@@ -86,7 +86,7 @@ Metamaterials are modeled as periodic geometries linked to constituent materials
 - `molecular_lab/core/` — foundational domain models.
 - `molecular_lab/chemistry/` — element data, formula parsing, and chemical diagnostics.
 - `molecular_lab/engines/` — discovery engines and calculation orchestration.
-- `molecular_lab/materials/` — metamaterial design, response, and classification records.
+- `molecular_lab/materials/` — metamaterial, electronic-structure, response, and classification records.
 - `docs/` — architecture and scientific design notes.
 - `tests/` — automated tests.
 
