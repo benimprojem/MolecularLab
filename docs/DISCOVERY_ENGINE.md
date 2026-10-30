@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 06 -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 07 -->
 
 # Discovery Engine
 
@@ -53,11 +53,12 @@ The initial offline catalogue is stored in `molecular_lab/database/reference_mol
 
 The seed catalogue contains five PubChem-derived records: water, hydrogen peroxide, methane, ethanol, and dimethyl ether. Lookup is available by formula and preferred name/synonym. Each record retains its PubChem CID, source URL, retrieval date, formula, canonical SMILES, InChIKey, and selected external identifiers.
 
-The lookup distinguishes three outcomes:
+The molecular lookup distinguishes three outcomes:
 
 - `EXACT_STRUCTURE`: an input InChIKey matches a reference record.
 - `FORMULA_ONLY`: one or more reference records have the same element counts, but exact structure identity is not established.
 - `NOT_FOUND`: the local catalogue contains no formula match.
+- `NOT_APPLICABLE`: used by the integrated workflow when a periodic formula unit is presented to the molecule-only catalogue; a separate crystal/material reference source is required.
 
 This distinction matters for isomers. Ethanol and dimethyl ether both have formula C2H6O, so formula alone cannot identify which structure was generated. A local `NOT_FOUND` result is not evidence of novelty; it only describes the current local catalogue. External PubChem synchronization/import is planned, not yet implemented.
 
@@ -115,7 +116,7 @@ The workflow is bounded by `max_compositions`, `max_graphs_per_composition`, and
 
 Diagnostics are advisory and do not automatically reject compositions. A composition outside the graph prototype's scope remains visible with `no_graph_within_prototype_scope`; charged and formula-unit records are also retained with explicit statuses rather than being misreported as impossible. Periodic-only searches are rejected because crystal structure generation is not implemented.
 
-The pipeline does not yet create 3D coordinates, optimize geometry, calculate energies, assess thermodynamic/kinetic stability, or calculate material properties. Formula-level catalogue matches remain distinct from exact graph identity, which depends on successful structure-identifier generation.
+The pipeline does not yet create 3D coordinates, optimize geometry, calculate energies, assess thermodynamic/kinetic stability, or calculate material properties. Formula-level catalogue matches remain distinct from exact graph identity, which depends on successful structure-identifier generation. Formula-unit compositions are explicitly marked `NOT_APPLICABLE` for the molecule-only catalogue rather than being treated as unknown molecules.
 
 ## 3. Formula-based exploration
 
