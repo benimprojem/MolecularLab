@@ -80,7 +80,7 @@ The UI framework, persistence technology, job scheduler, internal unit conventio
 
 Implemented: backend-neutral DFT settings; optional ASE structure conversion; QE `pw.x` input-deck generation and SCF/fixed-cell RELAX execution; GPAW calculator preparation and SCF/fixed-cell RELAX execution; common backend dispatch; common solver orchestration; molecular and material data models; bounded forward discovery; electronic-structure and periodic crystal records.
 
-Not implemented: variable-cell optimization; BANDS/DOS multi-stage workflows; stress normalization; automatic pseudopotential/PAW setup acquisition and validation; SOC and species/sublattice magnetic initialization; broad crystal structure generation; stability assessment; persistent job queue/cancellation; and actual material-property calculations.
+Not implemented: automatic pseudopotential/PAW setup acquisition and validation; SOC and species/sublattice magnetic initialization; GPAW BANDS/DOS; QE spin-polarized BANDS and relativistic/k-resolved PDOS; broad crystal structure generation; stability assessment; persistent job queue/cancellation; and actual experimental validation.
 
 
 ## DFT execution and variable-cell relaxation (Rev. 14)
@@ -90,12 +90,12 @@ The common execution layer dispatches SCF, fixed-cell ionic RELAX and variable-c
 
 ## Electronic band and DOS workflow preparation (Rev. 15)
 
-The backend-neutral settings now include structured reciprocal-space `BandPath` vertices and explicit total-DOS energy-window/sampling settings. The Quantum ESPRESSO adapter can generate a `pw.x` BANDS deck, a corresponding `bands.x` post-processing input, an NSCF deck for total DOS, and a `dos.x` post-processing input. The common execution API and output parsers do not yet execute or normalize BANDS/DOS results. GPAW BANDS/DOS execution is also not implemented. See [Quantum ESPRESSO](QUANTUM_ESPRESSO.md) and [Electronic Structure](ELECTRONIC_STRUCTURE.md).
+The backend-neutral settings include structured reciprocal-space `BandPath` vertices and explicit DOS energy-window/sampling settings. QE BANDS, total DOS and atom/orbital PDOS are now executed through sequential workflows and normalized into shared result records. GPAW BANDS/DOS remains unimplemented. See [Quantum ESPRESSO](QUANTUM_ESPRESSO.md) and [Electronic Structure](ELECTRONIC_STRUCTURE.md).
 
 
 ## QE electronic post-processing execution (Rev. 16)
 
-The common execution result now optionally carries BandStructureData or DensityOfStatesData. The QE execution dispatcher supports sequential BANDS (pw.x SCF, pw.x bands path, bands.x, parse .gnu) and total DOS (pw.x SCF, pw.x NSCF, dos.x, parse DOS table). Each stage is gated on successful process completion; absent or malformed result files fail the workflow. QE band-path distance is explicitly marked as such rather than mislabeled as a 3D fractional k-vector. GPAW BANDS/DOS and spin-polarized BANDS are not yet supported. Tests mock external processes; no actual QE scientific calculation is implied.
+The common execution result now optionally carries BandStructureData, DensityOfStatesData and ProjectedDensityOfStatesData. The QE execution dispatcher supports sequential BANDS (pw.x SCF, pw.x bands path, bands.x, parse .gnu), total DOS (pw.x SCF, pw.x NSCF, dos.x, parse DOS table), and atom/orbital PDOS (pw.x SCF, pw.x NSCF, projwfc.x, parse atomic PDOS files). Each stage is gated on successful process completion; absent or malformed result files fail the workflow. QE band-path distance is explicitly marked as such rather than mislabeled as a 3D fractional k-vector. GPAW BANDS/DOS and spin-polarized BANDS are not yet supported. Tests mock external processes; no actual QE scientific calculation is implied.
 
 
 ## QE projected density of states (Rev. 17)
