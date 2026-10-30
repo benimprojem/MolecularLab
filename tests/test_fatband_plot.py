@@ -116,3 +116,38 @@ def test_plot_normalization_does_not_mutate_raw_fatband_dataset():
         for contribution in point.contributions
     )
     assert after == before
+
+
+def test_svg_renderer_emits_standalone_plot_with_bands_orbitals_and_ticks():
+    from xml.etree import ElementTree
+    from molecular_lab.calculations.fatband_svg import render_fatband_svg
+
+    plot = prepare_fatband_plot_data(
+        sample_dataset(),
+        band_path=sample_path(),
+        lattice_vectors_angstrom=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)),
+        group_by="element_orbital",
+        normalization="global_max",
+    )
+    svg = render_fatband_svg(plot, width=900, height=600, title="Fe/O fat bands")
+    root = ElementTree.fromstring(svg)
+    assert root.tag.endswith("svg")
+    assert root.attrib["width"] == "900"
+    assert root.find(".//{http://www.w3.org/2000/svg}polyline") is not None
+    circles = root.findall(".//{http://www.w3.org/2000/svg}circle")
+    assert len(circles) >= 4
+    assert "GAMMA" in svg and "Fe · s" in svg and "O · p" in svg
+
+
+def test_svg_renderer_rejects_invalid_dimensions_and_energy_range():
+    from molecular_lab.calculations.fatband_svg import render_fatband_svg
+
+    plot = prepare_fatband_plot_data(
+        sample_dataset(),
+        band_path=sample_path(),
+        lattice_vectors_angstrom=((2.0, 0.0, 0.0), (0.0, 2.0, 0.0), (0.0, 0.0, 2.0)),
+    )
+    with pytest.raises(ValueError, match="dimensions"):
+        render_fatband_svg(plot, width=300)
+    with pytest.raises(ValueError, match="increasing"):
+        render_fatband_svg(plot, energy_range_ev=(2.0, 1.0))
