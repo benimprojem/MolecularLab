@@ -308,7 +308,7 @@ def prepare_qe_dos_postprocess_input(
         raise QuantumEspressoInputError("output_file must be a safe non-empty filename")
     dos = settings.dos
     delta_ev = (dos.energy_max_ev - dos.energy_min_ev) / (dos.points - 1)
-    text = "\\n".join([
+    text = "\n".join([
         "&DOS",
         f"  prefix = '{prefix}'",
         f"  outdir = {_quoted_path(outdir, 'outdir')}",
