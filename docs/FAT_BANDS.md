@@ -151,3 +151,84 @@ high-symmetry boundaries and labels, and atom/orbital contribution markers.
 Marker size follows the selected display-weight scale; each marker's SVG title
 retains its raw weight. This provides a renderer-independent file format while
 the desktop UI framework remains undecided.
+
+## End-to-end Python example
+
+The following example assumes that `structure` is an existing
+`CrystalStructure` and `bands_settings` is a configured
+`DFTCalculationSettings` with `task=DFTTask.BANDS` and a structured
+fractional-coordinate `band_path`. Its pseudopotential references, cutoffs,
+k-point mesh and convergence settings must already be appropriate for the
+material and the selected QE installation.
+
+```python
+from dataclasses import replace
+from pathlib import Path
+
+from molecular_lab.calculations import (
+    DFTOutput,
+    execute_dft_calculation,
+    prepare_fatband_plot_data,
+    render_fatband_svg,
+)
+
+# Opt in to the per-eigenstate atomic/orbital projection stage.
+fatband_settings = replace(
+    bands_settings,
+    requested_outputs=(DFTOutput.FAT_BAND_STRUCTURE,),
+)
+
+result = execute_dft_calculation(
+    backend="qe",
+    structure=structure,
+    settings=fatband_settings,
+    working_directory=Path("calculations/silicon-bands"),
+    executable="pw.x",
+    bands_executable="bands.x",
+    projwfc_executable="projwfc.x",
+)
+
+if not result.succeeded:
+    raise RuntimeError(f"QE BANDS workflow failed: {result.message}")
+
+if result.fat_band_structure is None:
+    raise RuntimeError("QE completed without returning fat-band data")
+
+plot_data = prepare_fatband_plot_data(
+    result.fat_band_structure,
+    band_path=fatband_settings.band_path,
+    lattice_vectors_angstrom=structure.lattice_vectors_angstrom,
+    group_by="element_orbital",
+    normalization="global_max",
+)
+
+svg_text = render_fatband_svg(
+    plot_data,
+    title=f"{structure.structure_id} — Fat bands",
+    width=1280,
+    height=800,
+)
+
+output_path = Path("results/silicon-fat-bands.svg")
+output_path.parent.mkdir(parents=True, exist_ok=True)
+output_path.write_text(svg_text, encoding="utf-8")
+print(f"Saved: {output_path}")
+```
+
+The example deliberately reuses the exact `BandPath` from the BANDS settings
+and the input structure's direct lattice vectors. Do not substitute a different
+path, a relaxed cell from another calculation, or lattice parameters in a
+different unit. The QE working directory must already contain the required
+pseudopotential files in the configured `pseudo_dir` (the current runner uses
+`./pseudo`) and the QE executables must be available to the process.
+
+For a less busy plot, change `group_by` to `"element"`, `"atom"` or
+`"orbital"`; use `elements`, `atom_indices`, `orbital_labels`,
+`spin_channels` or `band_indices` to filter the plot data. Available
+normalization modes are `"raw"`, `"global_max"` and `"per_band_max"`.
+These affect marker display values only; the dataset's raw projection weights
+remain unchanged.
+
+This is an API usage example, not a validated silicon input deck. Select and
+converge the actual pseudopotentials, cutoffs and k-point sampling for the
+material before interpreting the resulting band structure scientifically.
