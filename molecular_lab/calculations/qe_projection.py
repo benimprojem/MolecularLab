@@ -10,6 +10,10 @@ from dataclasses import dataclass
 import re
 import xml.etree.ElementTree as ET
 
+from molecular_lab.materials.electronic_structure import (
+    BandChannelData, BandStructureData, KPoint,
+)
+
 
 class QEProjectionParseError(ValueError):
     """Raised when a QE atomic-projection file cannot be interpreted safely."""
@@ -291,6 +295,90 @@ def parse_qe_atomic_proj_xml(xml_text: str, projwfc_output: str) -> QEAtomicProj
         nbands, nkpoints, spins, wavefunctions, tuple(coefficients), generation,
     )
 
+
+
+def parse_qe_projwfc_band_output(
+    output: str,
+    *,
+    fermi_level_ev: float | None = None,
+    backend_version: str = "",
+    exchange_correlation: str = "",
+) -> BandStructureData:
+    """Extract original k-point coordinates and eigenvalues from projwfc.x stdout.
+
+    This intentionally avoids bands.x reordered eigenvalue curves: atomic
+    projection coefficients are indexed by the original pw.x eigenstate order.
+    Keeping energies from projwfc.x stdout preserves that state identity at
+    crossings. Only scalar, non-spin-polarized output is supported here.
+    """
+    number = r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[EeDd][-+]?\d+)?"
+    kpoint_re = re.compile(
+        rf"^\s*k\s*=\s*({number})\s+({number})\s+({number})\s*$",
+        re.IGNORECASE | re.MULTILINE,
+    )
+    energy_re = re.compile(
+        rf"====\s*e\(\s*(\d+)\s*\)\s*=\s*({number})\s*eV\s*====",
+        re.IGNORECASE,
+    )
+    k_matches = list(kpoint_re.finditer(output))
+    if not k_matches:
+        raise QEProjectionParseError(
+            "No reciprocal-space k-point records were found in projwfc.x output."
+        )
+
+    kpoints: list[KPoint] = []
+    band_rows: list[dict[int, float]] = []
+    for index, match in enumerate(k_matches):
+        coordinates = tuple(
+            float(value.replace("D", "E").replace("d", "e"))
+            for value in match.groups()
+        )
+        end = k_matches[index + 1].start() if index + 1 < len(k_matches) else len(output)
+        block = output[match.end():end]
+        energies: dict[int, float] = {}
+        for energy_match in energy_re.finditer(block):
+            band_index = int(energy_match.group(1))
+            if band_index in energies:
+                raise QEProjectionParseError(
+                    f"Duplicate eigenvalue for band {band_index} at k-point {index}."
+                )
+            energies[band_index] = float(
+                energy_match.group(2).replace("D", "E").replace("d", "e")
+            )
+        if not energies:
+            raise QEProjectionParseError(
+                f"No eigenvalues were found for k-point {index} in projwfc.x output."
+            )
+        if sorted(energies) != list(range(1, len(energies) + 1)):
+            raise QEProjectionParseError(
+                f"Band indices at k-point {index} are not a contiguous one-based sequence."
+            )
+        kpoints.append(KPoint(coordinates, 1.0, "fractional"))
+        band_rows.append(energies)
+
+    band_count = len(band_rows[0])
+    if any(len(row) != band_count for row in band_rows):
+        raise QEProjectionParseError(
+            "projwfc.x output has inconsistent band counts between k-points."
+        )
+    energies_by_band = tuple(
+        tuple(row[band] for row in band_rows)
+        for band in range(1, band_count + 1)
+    )
+    return BandStructureData(
+        kpoints=tuple(kpoints),
+        channels=(BandChannelData("total", energies_by_band),),
+        fermi_level_ev=fermi_level_ev,
+        method="Quantum ESPRESSO projwfc.x original eigenstate energies",
+        backend="quantum_espresso",
+        backend_version=backend_version,
+        exchange_correlation=exchange_correlation,
+        notes=(
+            "Eigenvalues are taken from projwfc.x stdout to preserve the original pw.x state ordering.",
+            "K-point coordinates are fractional crystal reciprocal coordinates parsed from projwfc.x.",
+            "The conventional bands.x output may reorder bands; do not use its band indices for raw projection joins.",
+        ),
+    )
 
 def read_qe_atomic_proj_xml(xml_path: str, projwfc_output_path: str) -> QEAtomicProjectionData:
     """Read atomic_proj.xml and projwfc.x stdout from filesystem paths."""
