@@ -21,7 +21,7 @@ from molecular_lab.calculations.gpaw import (
 )
 from molecular_lab.calculations.execution import (
     DFTExecutionResult, DFTExecutionStatus,
-    execute_gpaw_scf, execute_quantum_espresso_scf,
+    execute_dft_calculation, execute_gpaw, execute_gpaw_scf,\n    execute_quantum_espresso, execute_quantum_espresso_scf,
 )
 
 __all__ = [
@@ -34,5 +34,5 @@ __all__ = [
     "GPAWInputError", "GPAWUnavailableError", "PreparedGPAWInput",
     "build_optimization_target", "create_gpaw_calculator", "prepare_gpaw_input",
     "DFTExecutionResult", "DFTExecutionStatus",
-    "execute_gpaw_scf", "execute_quantum_espresso_scf",
+    "execute_dft_calculation", "execute_gpaw", "execute_gpaw_scf",\n    "execute_quantum_espresso", "execute_quantum_espresso_scf",
 ]
