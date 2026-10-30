@@ -134,7 +134,7 @@ def test_bands_input_uses_explicit_crystal_b_path():
     deck = prepare_pw_input(crystal(), value).input_text
     assert "calculation = 'bands'" in deck
     assert "K_POINTS crystal_b" in deck
-    assert "3\\n" in deck
+    assert "3\n" in deck
     assert "0 0 0 24" in deck
     assert "0.5 0 0 18" in deck
     assert "0.5 0.5 0 0" in deck
