@@ -295,3 +295,54 @@ def test_fatband_builder_checks_projection_atom_identity_against_crystal():
     )
     with pytest.raises(ValueError, match="input structure site 1"):
         build_fatband_dataset(bands, projections, structure=wrong_order)
+
+
+def test_band_energy_spectrum_validation_ignores_band_reordering():
+    from molecular_lab.calculations.fatband import validate_band_energy_spectra
+
+    original_order = BandStructureData(
+        kpoints=(KPoint((0.0, 0.0, 0.0), 1.0), KPoint((0.5, 0.0, 0.0), 1.0)),
+        channels=(BandChannelData("total", ((-1.0, -0.8), (1.0, 1.2))),),
+    )
+    reordered = BandStructureData(
+        kpoints=original_order.kpoints,
+        channels=(BandChannelData("non_spin_polarized", ((1.0, 1.2), (-1.0, -0.8))),),
+    )
+    validate_band_energy_spectra(original_order, reordered)
+
+
+def test_band_energy_spectrum_validation_detects_wrong_kpoint_spectrum():
+    from molecular_lab.calculations.fatband import validate_band_energy_spectra
+
+    original = BandStructureData(
+        kpoints=(KPoint((0.0, 0.0, 0.0), 1.0), KPoint((0.5, 0.0, 0.0), 1.0)),
+        channels=(BandChannelData("total", ((-1.0, -0.8), (1.0, 1.2))),),
+    )
+    mismatched = BandStructureData(
+        kpoints=original.kpoints,
+        channels=(BandChannelData("non_spin_polarized", ((-1.0, -0.8), (1.1, 1.3))),),
+    )
+    with pytest.raises(ValueError, match="spectra disagree at k-point 1"):
+        validate_band_energy_spectra(original, mismatched)
+
+
+def test_band_energy_spectrum_validation_checks_tolerance_and_dimensions():
+    from molecular_lab.calculations.fatband import validate_band_energy_spectra
+
+    reference = BandStructureData(
+        kpoints=(KPoint((0.0, 0.0, 0.0), 1.0),),
+        channels=(BandChannelData("total", ((-1.0,), (1.0,))),),
+    )
+    slightly_shifted = BandStructureData(
+        kpoints=reference.kpoints,
+        channels=(BandChannelData("total", ((-0.99995,), (1.00005,))),),
+    )
+    validate_band_energy_spectra(reference, slightly_shifted)
+    with pytest.raises(ValueError, match="tolerance"):
+        validate_band_energy_spectra(reference, slightly_shifted, tolerance_ev=1e-6)
+    wrong_count = BandStructureData(
+        kpoints=reference.kpoints,
+        channels=(BandChannelData("total", ((-1.0,),)),),
+    )
+    with pytest.raises(ValueError, match="Band count"):
+        validate_band_energy_spectra(reference, wrong_count)
