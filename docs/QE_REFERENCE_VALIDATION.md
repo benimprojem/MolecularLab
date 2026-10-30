@@ -81,3 +81,21 @@ from this smoke test.
 QE adapter writes `ecutrho` in Ry after unit conversion and validates that it
 is not below `ecutwfc`. The value is not guessed automatically because the
 appropriate ratio depends on the selected pseudopotential family.
+
+
+## 6. Preflight checks before BANDS calculations
+
+Before starting the prerequisite SCF stage, the BANDS runner now checks:
+
+- that the working directory exists;
+- that the structure and settings have matching pseudopotential references;
+- that each structure element's UPF file exists under `<workdir>/pseudo`;
+- that ASE is discoverable;
+- that `pw.x` and `bands.x` are resolvable;
+- and, when `FAT_BAND_STRUCTURE` is requested, that `projwfc.x` is also resolvable.
+
+If any prerequisite is missing, the workflow returns
+`BACKEND_UNAVAILABLE` with a stage-oriented list of problems and does not
+start SCF. Plain BANDS requests do not require `projwfc.x`.
+This is an environment/file preflight, not a guarantee that the executables
+will run successfully or that the pseudopotential is scientifically suitable.
