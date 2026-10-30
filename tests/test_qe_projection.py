@@ -346,3 +346,64 @@ def test_band_energy_spectrum_validation_checks_tolerance_and_dimensions():
     )
     with pytest.raises(ValueError, match="Band count"):
         validate_band_energy_spectra(reference, wrong_count)
+
+
+def test_fatband_projection_diagnostics_report_zero_and_high_weights_without_normalizing():
+    from dataclasses import replace
+    from molecular_lab.calculations.fatband import diagnose_fatband_projection_weights
+
+    xml = """<ATOMIC_PROJECTIONS>
+      <HEADER NUMBER_OF_BANDS="1" NUMBER_OF_K-POINTS="1"
+              NUMBER_OF_SPIN_COMPONENTS="1" NUMBER_OF_ATOMIC_WFC="3"/>
+      <EIGENSTATES><PROJS>
+        <ATOMIC_WFC index="1">0.5 0.0</ATOMIC_WFC>
+        <ATOMIC_WFC index="2">0.0 0.5</ATOMIC_WFC>
+        <ATOMIC_WFC index="3">0.1 0.2</ATOMIC_WFC>
+      </PROJS></EIGENSTATES>
+    </ATOMIC_PROJECTIONS>"""
+    projections = parse_qe_atomic_proj_xml(xml, STATE_OUTPUT)
+    bands = BandStructureData(
+        kpoints=(KPoint((0.0, 0.0, 0.0), 1.0),),
+        channels=(BandChannelData("total", ((0.0,),)),),
+    )
+    dataset = build_fatband_dataset(bands, projections)
+    point = dataset.points[0]
+    high = replace(
+        point,
+        contributions=tuple(
+            replace(item, raw_weight=1.25 if item.angular_momentum == 0 else item.raw_weight)
+            for item in point.contributions
+        ),
+    )
+    empty = replace(point, contributions=())
+    changed = replace(dataset, points=(high,))
+    warnings = diagnose_fatband_projection_weights(changed)
+    assert any(item.code == "high_total_weight" for item in warnings)
+    assert any(item.code == "high_orbital_weight" for item in warnings)
+    assert high.total_projected_weight > 1.0
+    assert not diagnose_fatband_projection_weights(replace(dataset, points=(empty,)))[0].code == "high_total_weight"
+    assert diagnose_fatband_projection_weights(replace(dataset, points=(empty,)))[0].code == "zero_total_weight"
+
+
+def test_fatband_projection_diagnostics_validate_thresholds():
+    from molecular_lab.calculations.fatband import diagnose_fatband_projection_weights
+
+    xml = """<ATOMIC_PROJECTIONS>
+      <HEADER NUMBER_OF_BANDS="1" NUMBER_OF_K-POINTS="1"
+              NUMBER_OF_SPIN_COMPONENTS="1" NUMBER_OF_ATOMIC_WFC="3"/>
+      <EIGENSTATES><PROJS>
+        <ATOMIC_WFC index="1">0.5 0.0</ATOMIC_WFC>
+        <ATOMIC_WFC index="2">0.0 0.5</ATOMIC_WFC>
+        <ATOMIC_WFC index="3">0.1 0.2</ATOMIC_WFC>
+      </PROJS></EIGENSTATES>
+    </ATOMIC_PROJECTIONS>"""
+    projections = parse_qe_atomic_proj_xml(xml, STATE_OUTPUT)
+    bands = BandStructureData(
+        kpoints=(KPoint((0.0, 0.0, 0.0), 1.0),),
+        channels=(BandChannelData("total", ((0.0,),)),),
+    )
+    dataset = build_fatband_dataset(bands, projections)
+    with pytest.raises(ValueError, match="thresholds"):
+        diagnose_fatband_projection_weights(dataset, high_total_weight_threshold=float("nan"))
+    with pytest.raises(ValueError, match="thresholds"):
+        diagnose_fatband_projection_weights(dataset, zero_weight_tolerance=True)
