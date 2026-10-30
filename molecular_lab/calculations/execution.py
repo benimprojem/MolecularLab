@@ -6,7 +6,7 @@ DOS remain separate future workflows.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from pathlib import Path
 import re
@@ -18,7 +18,17 @@ from molecular_lab.calculations.ase_bridge import ASEUnavailableError
 from molecular_lab.calculations.dft_settings import (
     DFTCalculationSettings, DFTOutput, DFTTask,
 )
-from molecular_lab.calculations.quantum_espresso import prepare_pw_input
+from molecular_lab.calculations.quantum_espresso import (
+    prepare_pw_input, prepare_qe_bands_postprocess_input,
+    prepare_qe_dos_postprocess_input,
+)
+from molecular_lab.calculations.qe_output import (
+    QEOutputParseError, parse_qe_bands_gnu, parse_qe_fermi_level,
+    parse_qe_total_dos,
+)
+from molecular_lab.materials.electronic_structure import (
+    BandStructureData, DensityOfStatesData,
+)
 from molecular_lab.structures.crystal import CrystalSite, CrystalStructure
 
 
@@ -44,6 +54,8 @@ class DFTExecutionResult:
     optimized_structure: CrystalStructure | None = None
     forces_ev_per_angstrom: tuple[tuple[float, float, float], ...] = ()
     stress_gpa: tuple[tuple[float, float, float], ...] | None = None
+    band_structure: BandStructureData | None = None
+    density_of_states: DensityOfStatesData | None = None
 
     @property
     def succeeded(self) -> bool:
@@ -524,6 +536,244 @@ def execute_gpaw_scf(
     return execute_gpaw(structure, settings, log_file=log_file)
 
 
+
+def _resolve_qe_executable(executable: str) -> str | None:
+    resolved = shutil.which(executable)
+    if resolved is None and Path(executable).is_file():
+        resolved = str(Path(executable).resolve())
+    return resolved
+
+
+def _run_qe_input(
+    executable: str,
+    input_text: str,
+    *,
+    workdir: Path,
+    timeout_seconds: float,
+    command_prefix: Sequence[str],
+) -> tuple[subprocess.CompletedProcess | None, DFTExecutionResult | None]:
+    executable_path = _resolve_qe_executable(executable)
+    if executable_path is None:
+        return None, DFTExecutionResult(
+            "quantum_espresso", DFTExecutionStatus.BACKEND_UNAVAILABLE,
+            f"QE executable was not found: {executable}",
+        )
+    try:
+        completed = subprocess.run(
+            [*command_prefix, executable_path],
+            input=input_text, cwd=workdir, capture_output=True,
+            text=True, timeout=timeout_seconds, check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return None, DFTExecutionResult(
+            "quantum_espresso", DFTExecutionStatus.TIMED_OUT,
+            f"{executable} exceeded the {timeout_seconds:g} second time limit.",
+            stdout=exc.stdout.decode(errors="replace") if isinstance(exc.stdout, bytes) else (exc.stdout or ""),
+            stderr=exc.stderr.decode(errors="replace") if isinstance(exc.stderr, bytes) else (exc.stderr or ""),
+        )
+    except OSError as exc:
+        return None, DFTExecutionResult(
+            "quantum_espresso", DFTExecutionStatus.FAILED,
+            f"Could not start {executable}: {type(exc).__name__}: {exc}",
+        )
+    if completed.returncode != 0:
+        return completed, DFTExecutionResult(
+            "quantum_espresso", DFTExecutionStatus.FAILED,
+            f"{executable} exited with return code {completed.returncode}.",
+            return_code=completed.returncode,
+            stdout=completed.stdout or "", stderr=completed.stderr or "",
+        )
+    if "JOB DONE." not in (completed.stdout or ""):
+        return completed, DFTExecutionResult(
+            "quantum_espresso", DFTExecutionStatus.FAILED,
+            f"{executable} did not report normal completion.",
+            return_code=completed.returncode,
+            stdout=completed.stdout or "", stderr=completed.stderr or "",
+        )
+    return completed, None
+
+
+def execute_qe_bands(
+    structure: CrystalStructure,
+    settings: DFTCalculationSettings,
+    *,
+    working_directory: str | Path,
+    executable: str = "pw.x",
+    bands_executable: str = "bands.x",
+    timeout_seconds: float = 3600.0,
+    command_prefix: Sequence[str] = (),
+    output_file: str = "molecular_lab.bands",
+) -> DFTExecutionResult:
+    """Execute SCF -> pw.x BANDS -> bands.x and parse the .gnu result."""
+    if settings.task is not DFTTask.BANDS or settings.band_path is None:
+        raise ValueError("execute_qe_bands requires BANDS settings with a structured BandPath")
+    if settings.spin_polarized:
+        return DFTExecutionResult(
+            "quantum_espresso", DFTExecutionStatus.BACKEND_UNAVAILABLE,
+            "Spin-polarized BANDS execution is not yet supported by the common QE workflow.",
+        )
+    workdir = Path(working_directory).expanduser().resolve()
+    if not workdir.is_dir():
+        raise ValueError("working_directory must be an existing directory")
+    scf_settings = replace(
+        settings, task=DFTTask.SCF, band_path=None, band_path_ref="",
+        dos=None, requested_outputs=(DFTOutput.TOTAL_ENERGY,),
+    )
+    scf_result = execute_quantum_espresso(
+        structure, scf_settings, working_directory=workdir,
+        executable=executable, timeout_seconds=timeout_seconds,
+        command_prefix=command_prefix,
+    )
+    if not scf_result.succeeded:
+        return replace(scf_result, message="BANDS workflow stopped at prerequisite SCF: " + scf_result.message)
+    try:
+        bands_input = prepare_pw_input(structure, settings, outdir="./tmp", pseudo_dir="./pseudo")
+        post_input = prepare_qe_bands_postprocess_input(
+            settings, output_file=output_file,
+        )
+    except Exception as exc:
+        return DFTExecutionResult(
+            "quantum_espresso", DFTExecutionStatus.FAILED,
+            f"Could not prepare BANDS stages: {type(exc).__name__}: {exc}",
+            total_energy_ev=scf_result.total_energy_ev,
+            backend_version=scf_result.backend_version,
+        )
+    (workdir / "tmp").mkdir(exist_ok=True)
+    bands_run, error = _run_qe_input(
+        executable, bands_input.input_text, workdir=workdir,
+        timeout_seconds=timeout_seconds, command_prefix=command_prefix,
+    )
+    if error is not None:
+        return replace(error, message="BANDS workflow stopped at pw.x BANDS stage: " + error.message)
+    post_run, error = _run_qe_input(
+        bands_executable, post_input.input_text, workdir=workdir,
+        timeout_seconds=timeout_seconds, command_prefix=command_prefix,
+    )
+    if error is not None:
+        return replace(error, message="BANDS workflow stopped at bands.x stage: " + error.message)
+    gnu_path = workdir / (output_file + ".gnu")
+    if not gnu_path.is_file():
+        return DFTExecutionResult(
+            "quantum_espresso", DFTExecutionStatus.FAILED,
+            f"bands.x completed but expected output was not found: {gnu_path.name}",
+            total_energy_ev=scf_result.total_energy_ev,
+            backend_version=scf_result.backend_version,
+            stdout=(bands_run.stdout or "") + (post_run.stdout or ""),
+            stderr=(bands_run.stderr or "") + (post_run.stderr or ""),
+        )
+    try:
+        band_data = parse_qe_bands_gnu(
+            gnu_path.read_text(encoding="utf-8"),
+            fermi_level_ev=parse_qe_fermi_level(scf_result.stdout),
+            backend_version=scf_result.backend_version,
+            exchange_correlation=settings.exchange_correlation,
+        )
+    except (OSError, QEOutputParseError) as exc:
+        return DFTExecutionResult(
+            "quantum_espresso", DFTExecutionStatus.FAILED,
+            f"BANDS workflow output parsing failed: {exc}",
+            total_energy_ev=scf_result.total_energy_ev,
+            backend_version=scf_result.backend_version,
+        )
+    return DFTExecutionResult(
+        "quantum_espresso", DFTExecutionStatus.SUCCEEDED,
+        "QE SCF, BANDS and bands.x stages completed; band data were parsed.",
+        total_energy_ev=scf_result.total_energy_ev, converged=True,
+        return_code=post_run.returncode,
+        backend_version=scf_result.backend_version,
+        stdout=(scf_result.stdout or "") + (bands_run.stdout or "") + (post_run.stdout or ""),
+        stderr=(bands_run.stderr or "") + (post_run.stderr or ""),
+        band_structure=band_data,
+    )
+
+
+def execute_qe_dos(
+    structure: CrystalStructure,
+    settings: DFTCalculationSettings,
+    *,
+    working_directory: str | Path,
+    executable: str = "pw.x",
+    dos_executable: str = "dos.x",
+    timeout_seconds: float = 3600.0,
+    command_prefix: Sequence[str] = (),
+    output_file: str = "molecular_lab.dos",
+) -> DFTExecutionResult:
+    """Execute SCF -> NSCF -> dos.x and parse the total DOS result."""
+    if settings.task is not DFTTask.DOS or settings.dos is None:
+        raise ValueError("execute_qe_dos requires DOS settings")
+    workdir = Path(working_directory).expanduser().resolve()
+    if not workdir.is_dir():
+        raise ValueError("working_directory must be an existing directory")
+    scf_settings = replace(
+        settings, task=DFTTask.SCF, band_path=None, band_path_ref="",
+        dos=None, requested_outputs=(DFTOutput.TOTAL_ENERGY,),
+    )
+    scf_result = execute_quantum_espresso(
+        structure, scf_settings, working_directory=workdir,
+        executable=executable, timeout_seconds=timeout_seconds,
+        command_prefix=command_prefix,
+    )
+    if not scf_result.succeeded:
+        return replace(scf_result, message="DOS workflow stopped at prerequisite SCF: " + scf_result.message)
+    try:
+        nscf_input = prepare_pw_input(structure, settings, outdir="./tmp", pseudo_dir="./pseudo")
+        dos_input = prepare_qe_dos_postprocess_input(settings, output_file=output_file)
+    except Exception as exc:
+        return DFTExecutionResult(
+            "quantum_espresso", DFTExecutionStatus.FAILED,
+            f"Could not prepare DOS stages: {type(exc).__name__}: {exc}",
+            total_energy_ev=scf_result.total_energy_ev,
+            backend_version=scf_result.backend_version,
+        )
+    (workdir / "tmp").mkdir(exist_ok=True)
+    nscf_run, error = _run_qe_input(
+        executable, nscf_input.input_text, workdir=workdir,
+        timeout_seconds=timeout_seconds, command_prefix=command_prefix,
+    )
+    if error is not None:
+        return replace(error, message="DOS workflow stopped at pw.x NSCF stage: " + error.message)
+    dos_run, error = _run_qe_input(
+        dos_executable, dos_input.input_text, workdir=workdir,
+        timeout_seconds=timeout_seconds, command_prefix=command_prefix,
+    )
+    if error is not None:
+        return replace(error, message="DOS workflow stopped at dos.x stage: " + error.message)
+    dos_path = workdir / output_file
+    if not dos_path.is_file():
+        return DFTExecutionResult(
+            "quantum_espresso", DFTExecutionStatus.FAILED,
+            f"dos.x completed but expected output was not found: {dos_path.name}",
+            total_energy_ev=scf_result.total_energy_ev,
+            backend_version=scf_result.backend_version,
+            stdout=(nscf_run.stdout or "") + (dos_run.stdout or ""),
+            stderr=(nscf_run.stderr or "") + (dos_run.stderr or ""),
+        )
+    try:
+        dos_data = parse_qe_total_dos(
+            dos_path.read_text(encoding="utf-8"),
+            spin_polarized=settings.spin_polarized,
+            fermi_level_ev=parse_qe_fermi_level(scf_result.stdout),
+            backend_version=scf_result.backend_version,
+        )
+    except (OSError, QEOutputParseError) as exc:
+        return DFTExecutionResult(
+            "quantum_espresso", DFTExecutionStatus.FAILED,
+            f"DOS workflow output parsing failed: {exc}",
+            total_energy_ev=scf_result.total_energy_ev,
+            backend_version=scf_result.backend_version,
+        )
+    return DFTExecutionResult(
+        "quantum_espresso", DFTExecutionStatus.SUCCEEDED,
+        "QE SCF, NSCF and dos.x stages completed; total DOS data were parsed.",
+        total_energy_ev=scf_result.total_energy_ev, converged=True,
+        return_code=dos_run.returncode,
+        backend_version=scf_result.backend_version,
+        stdout=(scf_result.stdout or "") + (nscf_run.stdout or "") + (dos_run.stdout or ""),
+        stderr=(nscf_run.stderr or "") + (dos_run.stderr or ""),
+        density_of_states=dos_data,
+    )
+
+
 def execute_dft_calculation(
     backend: str,
     structure: CrystalStructure,
@@ -538,6 +788,22 @@ def execute_dft_calculation(
     """Common user-facing entry point dispatching to a selected DFT backend."""
     backend_key = backend.strip().lower()
     if backend_key in ("qe", "quantum_espresso", "quantum-espresso"):
+        if settings.task is DFTTask.BANDS:
+            if working_directory is None:
+                raise ValueError("working_directory is required for Quantum ESPRESSO")
+            return execute_qe_bands(
+                structure, settings, working_directory=working_directory,
+                executable=executable, timeout_seconds=timeout_seconds,
+                command_prefix=command_prefix,
+            )
+        if settings.task is DFTTask.DOS:
+            if working_directory is None:
+                raise ValueError("working_directory is required for Quantum ESPRESSO")
+            return execute_qe_dos(
+                structure, settings, working_directory=working_directory,
+                executable=executable, timeout_seconds=timeout_seconds,
+                command_prefix=command_prefix,
+            )
         if working_directory is None:
             raise ValueError("working_directory is required for Quantum ESPRESSO")
         return execute_quantum_espresso(
@@ -546,6 +812,11 @@ def execute_dft_calculation(
             command_prefix=command_prefix,
         )
     if backend_key == "gpaw":
+        if settings.task in (DFTTask.BANDS, DFTTask.DOS):
+            return DFTExecutionResult(
+                "gpaw", DFTExecutionStatus.BACKEND_UNAVAILABLE,
+                "GPAW BANDS/DOS workflows are not implemented yet.",
+            )
         return execute_gpaw(structure, settings, log_file=log_file)
     return DFTExecutionResult(
         backend_key or "unknown", DFTExecutionStatus.BACKEND_UNAVAILABLE,
