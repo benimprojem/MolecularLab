@@ -82,6 +82,18 @@ def test_scf_deck_contains_species_cell_positions_and_kmesh():
     assert any("not downloaded" in warning for warning in result.warnings)
 
 
+def test_charge_density_cutoff_is_emitted_in_rydberg():
+    value = settings(charge_density_cutoff=EnergyCutoff(240, EnergyUnit.RYDBERG))
+    deck = prepare_pw_input(crystal(), value).input_text
+    assert "ecutwfc = 60" in deck
+    assert "ecutrho = 240" in deck
+
+
+def test_charge_density_cutoff_must_not_be_below_wavefunction_cutoff():
+    with pytest.raises(ValueError, match="greater than or equal"):
+        settings(charge_density_cutoff=EnergyCutoff(40, EnergyUnit.RYDBERG))
+
+
 def test_cutoff_and_smearing_are_converted_to_rydberg():
     value = settings(
         energy_cutoff=EnergyCutoff(27.211386245988, EnergyUnit.EV),
