@@ -87,10 +87,8 @@ def test_fused_benzenoid_templates_distinguish_anthracene_and_phenanthrene():
 
     graphs = list(iter_fused_benzenoid_graphs(parse_formula("C14H10")))
     assert graphs
-    assert {graph.method.rsplit("_", 3)[0] for graph in graphs} >= {
-        "bounded_fused_benzenoid_anthracene",
-        "bounded_fused_benzenoid_phenanthrene",
-    }
+    assert any(graph.method.startswith("bounded_fused_benzenoid_anthracene_") for graph in graphs)
+    assert any(graph.method.startswith("bounded_fused_benzenoid_phenanthrene_") for graph in graphs)
 
     for graph in graphs:
         heavy_ids = {atom.atom_id for atom in graph.atoms if atom.element != "H"}
