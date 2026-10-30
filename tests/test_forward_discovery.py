@@ -2,7 +2,7 @@
 Tests for the integrated forward molecular discovery workflow.
 
 Version: 0.1
-Rev.: 00
+Rev.: 01
 """
 
 import pytest
@@ -175,4 +175,32 @@ def test_forward_pipeline_includes_unicyclic_ring_proposals(monkeypatch):
     assert any(
         graph.method == "bounded_unicyclic_bond_order_graph_v1"
         for graph in cyclopropane_formula.graphs
+    )
+
+
+
+def test_forward_pipeline_uses_fused_atom_bound_independently_of_acyclic_bound(monkeypatch):
+    from molecular_lab.engines import structure_identification
+
+    monkeypatch.setattr(structure_identification, "_load_rdkit", lambda: None)
+    constraints = SearchConstraints(
+        allowed_elements=frozenset({"C", "H"}),
+        min_total_atoms=24,
+        max_total_atoms=24,
+        domain=SearchDomain.MOLECULE,
+        per_element_max={"C": 14, "H": 10},
+    )
+    result = next(iter_forward_discovery(
+        constraints,
+        required_elements={"C", "H"},
+        max_compositions=1,
+        max_heavy_atoms=8,
+        max_fused_heavy_atoms=16,
+    ))
+
+    assert dict(result.composition.counts) == {"C": 14, "H": 10}
+    assert result.graph_generation_status == "graphs_proposed"
+    assert any(
+        graph.method.startswith("bounded_fused_benzenoid_")
+        for graph in result.graphs
     )
