@@ -3,11 +3,11 @@ import pytest
 from molecular_lab.calculations import quantum_espresso as qe
 from molecular_lab.calculations.dft_settings import (
     DFTCalculationSettings, DFTOutput, DFTTask, EnergyCutoff, EnergyUnit,
-    KPointMesh, KPointScheme, PseudopotentialReference, SmearingScheme,
-    SmearingSettings, ConvergenceSettings,
+    BandPath, BandPathPoint, DOSSettings, KPointMesh, KPointScheme,
+    PseudopotentialReference, SmearingScheme, SmearingSettings, ConvergenceSettings,
 )
 from molecular_lab.calculations.quantum_espresso import (
-    QuantumEspressoInputError, prepare_pw_input,
+    QuantumEspressoInputError, prepare_pw_input, prepare_qe_dos_postprocess_input,
 )
 from molecular_lab.structures.crystal import CrystalSite, CrystalStructure
 
@@ -119,10 +119,50 @@ def test_vc_relax_maps_pressure_gpa_to_kbar():
 
 
 @pytest.mark.parametrize("task", [DFTTask.BANDS, DFTTask.DOS])
-def test_bands_and_dos_are_rejected(task):
-    value = settings(task=task, band_path_ref="path:test") if task is DFTTask.BANDS else settings(task=task)
-    with pytest.raises(QuantumEspressoInputError, match="supports SCF"):
+def test_bands_input_uses_explicit_crystal_b_path():
+    path = BandPath((
+        BandPathPoint((0.0, 0.0, 0.0), "GAMMA", 24),
+        BandPathPoint((0.5, 0.0, 0.0), "X", 18),
+        BandPathPoint((0.5, 0.5, 0.0), "M", 0),
+    ))
+    value = settings(
+        task=DFTTask.BANDS,
+        band_path=path,
+        requested_outputs=(DFTOutput.BAND_STRUCTURE,),
+    )
+    deck = prepare_pw_input(crystal(), value).input_text
+    assert "calculation = 'bands'" in deck
+    assert "K_POINTS crystal_b" in deck
+    assert "3\\n" in deck
+    assert "0 0 0 24" in deck
+    assert "0.5 0 0 18" in deck
+    assert "0.5 0.5 0 0" in deck
+
+
+def test_bands_reference_without_structured_path_is_not_enough_for_qe():
+    value = settings(
+        task=DFTTask.BANDS,
+        band_path_ref="path:external",
+        requested_outputs=(DFTOutput.BAND_STRUCTURE,),
+    )
+    with pytest.raises(QuantumEspressoInputError, match="BandPath vertices"):
         prepare_pw_input(crystal(), value)
+
+
+def test_dos_nscf_and_dos_x_inputs_are_prepared():
+    value = settings(
+        task=DFTTask.DOS,
+        dos=DOSSettings(-10.0, 20.0, points=601, broadening_ev=0.08),
+        requested_outputs=(DFTOutput.DENSITY_OF_STATES,),
+    )
+    nscf = prepare_pw_input(crystal(), value)
+    assert "calculation = 'nscf'" in nscf.input_text
+    assert "K_POINTS automatic" in nscf.input_text
+    dos_input = prepare_qe_dos_postprocess_input(value)
+    assert "Emin = -10" in dos_input.input_text
+    assert "Emax = 20" in dos_input.input_text
+    assert "DeltaE = 0.05" in dos_input.input_text
+    assert dos_input.required_saved_calculation == "./tmp/molecular_lab.save"
 
 
 def test_soc_is_rejected_until_relativistic_pseudo_metadata_exists():
