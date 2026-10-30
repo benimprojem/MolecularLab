@@ -2,7 +2,7 @@
 Integrated forward molecular discovery workflow.
 
 Version: 0.1
-Rev.: 02
+Rev.: 03
 Status: First end-to-end composition-to-graph pipeline.
 
 This workflow combines bounded composition enumeration, advisory diagnostics,
@@ -13,6 +13,7 @@ identification. It does not perform geometry optimization or stability tests.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import zip_longest
 from typing import Iterator
 
 from molecular_lab.chemistry.plausibility import (
@@ -32,7 +33,10 @@ from molecular_lab.database.reference_molecules import (
     identify_candidate,
 )
 from molecular_lab.engines.composition_enumerator import iter_compositions
-from molecular_lab.engines.molecular_graphs import iter_acyclic_graphs
+from molecular_lab.engines.molecular_graphs import (
+    iter_acyclic_graphs,
+    iter_unicyclic_graphs,
+)
 from molecular_lab.engines.structure_identification import (
     GraphIdentificationResult,
     identify_graph_against_catalogue,
@@ -68,8 +72,9 @@ def iter_forward_discovery(
     number of raw combinations silently skipped. Every yielded result carries
     diagnostics and catalogue status, even if no graph can be proposed.
 
-    The current graph prototype is molecular-only, neutral, acyclic, and limited
-    to fixed-valence H/C/N/O/F/Cl chemistry with bond orders 1-3. Out-of-scope compositions remain
+    The current graph prototypes are molecular-only, neutral, and limited to
+    fixed-valence H/C/N/O/F/Cl chemistry with bond orders 1-3. They cover
+    acyclic and bounded unicyclic heavy-atom skeletons. Out-of-scope compositions remain
     visible in the output with an explanatory graph-generation status.
     """
     for name, value in (
@@ -125,22 +130,38 @@ def iter_forward_discovery(
                 "This charged composition has not been assessed structurally."
             )
         else:
-            graphs = tuple(
-                iter_acyclic_graphs(
-                    composition,
-                    max_candidates=max_graphs_per_composition,
-                    max_heavy_atoms=max_heavy_atoms,
-                    max_assignments=max_graph_assignments,
-                )
+            acyclic_iter = iter_acyclic_graphs(
+                composition,
+                max_candidates=max_graphs_per_composition,
+                max_heavy_atoms=max_heavy_atoms,
+                max_assignments=max_graph_assignments,
             )
+            cyclic_iter = iter_unicyclic_graphs(
+                composition,
+                max_candidates=max_graphs_per_composition,
+                max_heavy_atoms=max_heavy_atoms,
+                max_assignments=max_graph_assignments,
+            )
+            proposed: list[MolecularGraph] = []
+            for acyclic_graph, cyclic_graph in zip_longest(
+                acyclic_iter, cyclic_iter
+            ):
+                for graph in (acyclic_graph, cyclic_graph):
+                    if graph is not None:
+                        proposed.append(graph)
+                        if len(proposed) >= max_graphs_per_composition:
+                            break
+                if len(proposed) >= max_graphs_per_composition:
+                    break
+            graphs = tuple(proposed)
             identifications = tuple(
                 identify_graph_against_catalogue(graph) for graph in graphs
             )
             if graphs:
                 status = "graphs_proposed"
                 note = (
-                    "One or more connectivity hypotheses were generated within "
-                    "the restricted bond-order-aware acyclic graph model."
+                    "Connectivity hypotheses were generated using the bounded "
+                    "acyclic and unicyclic fixed-valence graph models."
                 )
             else:
                 status = "no_graph_within_prototype_scope"
