@@ -129,7 +129,15 @@ MolecularLab/
 └── tests/
 ```
 
-## 8. Additional architecture notes\n\n- [Large molecular systems and scalability](docs/LARGE_SYSTEMS.md)\n- [Molecular fragment model](docs/FRAGMENTS.md)\n- [Metamaterial discovery architecture](docs/METAMATERIALS.md)\n\nMetamaterials are treated as a separate periodic-geometry discovery domain. Molecular composition, crystal structure, and engineered unit-cell geometry are linked when useful but are not collapsed into one representation.\n\n## 9. Development principles
+## 8. Additional architecture notes
+
+- [Large molecular systems and scalability](docs/LARGE_SYSTEMS.md)
+- [Molecular fragment model](docs/FRAGMENTS.md)
+- [Metamaterial discovery architecture](docs/METAMATERIALS.md)
+
+Metamaterials are treated as a separate periodic-geometry discovery domain. Molecular composition, crystal structure, and engineered unit-cell geometry are linked when useful but are not collapsed into one representation.
+
+## 9. Development principles
 
 1. Scientific assumptions and search bounds must be explicit.
 2. A generated candidate must not automatically be called a stable compound.
@@ -154,7 +162,9 @@ MolecularLab/
 - [x] Connect restricted graph proposals to catalogue matching, with optional RDKit canonical SMILES/InChIKey generation and formula-only fallback.
 - [x] Integrate composition enumeration, diagnostics, reference lookup, graph proposals, and structure identification into one bounded forward-discovery workflow.
 - [x] Add registered fused-benzenoid graph prototypes for naphthalene, anthracene, phenanthrene, and bounded longer linear acenes (Kekulé representations; not a general fused-ring engine).
-- [x] Add foundational molecular fragment and attachment-port records (assembly engine remains planned).\n- [x] Add foundational metamaterial unit-cell and target-design records (electromagnetic simulation remains planned).\n- [ ] Expand structure generation and validation beyond the restricted prototype.
+- [x] Add foundational molecular fragment and attachment-port records (assembly engine remains planned).
+- [x] Add foundational metamaterial unit-cell and target-design records (electromagnetic simulation remains planned).
+- [ ] Expand structure generation and validation beyond the restricted prototype.
 - [ ] Add optional PubChem synchronization/import with rate limits, caching, and provenance retention.
 - [ ] Integrate the first calculation backend.
 - [ ] Build the first usable desktop workflow.
