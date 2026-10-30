@@ -40,18 +40,18 @@ def test_methane_graph_is_proposed():
     assert atom_counts(graphs[0]) == {"C": 1, "H": 4}
 
 
-def test_ethanol_connectivity_is_proposed():
+def test_c2h6o_connectivity_isomers_are_proposed():
     graphs = list(iter_saturated_acyclic_graphs(parse_formula("C2H6O")))
-    graphs = list(graphs)
-    assert len(graphs) == 1
-    graph = graphs[0]
-    carbon_ids = {atom.atom_id for atom in graph.atoms if atom.element == "C"}
-    oxygen_id = next(atom.atom_id for atom in graph.atoms if atom.element == "O")
-    assert sum(
-        1 for bond in graph.bonds
-        if oxygen_id in (bond.atom_a, bond.atom_b)
-        and (bond.atom_a in carbon_ids or bond.atom_b in carbon_ids)
-    ) == 1
+    assert len(graphs) == 2
+    oxygen_degrees = []
+    for graph in graphs:
+        oxygen_id = next(atom.atom_id for atom in graph.atoms if atom.element == "O")
+        oxygen_degrees.append(sum(
+            1 for bond in graph.bonds
+            if oxygen_id in (bond.atom_a, bond.atom_b)
+        ))
+    # Ethanol has terminal O; dimethyl ether has O between two carbons.
+    assert sorted(oxygen_degrees) == [1, 2]
 
 
 def test_unsupported_formula_is_not_misreported_as_impossible():
