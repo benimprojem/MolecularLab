@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 04 -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 05 -->
 
 # Electronic-Structure Result Model
 
@@ -19,7 +19,9 @@ The direct gap is the minimum occupied-to-unoccupied separation at the same samp
 
 ## Density of states
 
-- **DensityOfStatesChannel** stores non-negative DOS values in states/eV for one spin channel.
+- **DensityOfStatesChannel** stores non-negative total DOS values in states/eV for one spin channel.
+- **ProjectedDOSRecord** stores atom index, element, pseudopotential wavefunction index, angular momentum, spin channel, local orbital DOS and (2l+1) angular components.
+- **ProjectedDensityOfStatesData** groups atom/orbital records on a shared energy grid, with Fermi level and backend provenance.
 - **DensityOfStatesData** stores a strictly increasing energy grid, spin channels, optional Fermi level, projection label, normalization description, and solver metadata.
 
 The normalization must state whether DOS is per cell, atom, formula unit, or another convention. Projected DOS must preserve the projection definition (atom, orbital, spin, or other projector) in metadata/notes. The initial model does not integrate DOS, infer carrier density, or estimate mobility.
@@ -35,9 +37,9 @@ The normalization must state whether DOS is per cell, atom, formula unit, or ano
 
 ## Current status
 
-Implemented: standard-library records, validation, and tests for k-points, spin-resolved bands, occupation arrays, direct/indirect gap screening, and total/projected DOS grids.
+Implemented: standard-library records, validation, and tests for k-points, spin-resolved bands, occupation arrays, direct/indirect gap screening, total DOS, and atom/orbital-resolved PDOS.
 
-Partially implemented: Quantum ESPRESSO input preparation for a structured BANDS path and total-DOS NSCF/dos.x workflow. Not implemented: BANDS/DOS process orchestration and output parsers for QE/GPAW, construction of normalized result records from solver output, band interpolation, projected-DOS adapters, effective masses, Fermi-surface analysis, optical transitions, or actual DFT execution.
+Partially implemented: QE BANDS, total DOS and collinear scalar-relativistic atom/orbital PDOS execution and output parsing. Not implemented: GPAW BANDS/DOS, spin-polarized BANDS, fully relativistic j-resolved and k-resolved PDOS, band interpolation, effective masses, Fermi-surface analysis, optical transitions, or actual experimental validation.
 
 
 ## Quantum ESPRESSO output ingestion
@@ -45,3 +47,10 @@ Partially implemented: Quantum ESPRESSO input preparation for a structured BANDS
 The QE adapter's parsed BANDS result currently uses the .gnu output produced by bands.x. Its first column is cumulative path distance, not a Cartesian or fractional reciprocal vector; the common KPoint record therefore includes a coordinate-system label. The energies are stored in eV.
 
 The total-DOS parser reads the energy and DOS columns in eV and states/eV. Spin-polarized tables are represented as separate up/down channels. Integrated-DOS columns are ignored because the current common DOS model does not yet carry integrated counts. The parser attaches a Fermi level only when explicitly reported; it does not synthesize a mid-gap reference.
+
+
+## Projected density of states
+
+The QE PDOS adapter uses `projwfc.x` output files. Each record preserves the one-based atom index, element, pseudopotential wavefunction index, angular momentum (l), spin channel, local DOS and the (2l+1) angular components. Collinear spin-polarized output keeps spin-up and spin-down separate. QE's p and d component ordering is retained as documented; f components are kept as generic angular labels.
+
+The decomposition depends on the pseudopotential atomic wavefunctions and projection procedure. It is not a unique observable assignment of electronic charge to atoms or orbitals. j-resolved relativistic and k-resolved output are not yet supported. See [QE projwfc.x documentation](https://www.quantum-espresso.org/Doc/INPUT_PROJWFC.html).
