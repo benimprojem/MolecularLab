@@ -72,7 +72,7 @@ Files added:
 
 Also updated `molecular_lab/calculations/__init__.py`, `docs/ELECTRONIC_STRUCTURE.md` and `README.md`.
 
-**Validation status:** GitHub Actions passed for the parser and execution integration on commit `29812cc4ecf96c4ab75bfbadd93f4885b384ec36` (274 passed, 1 skipped with RDKit; 269 passed, 6 skipped without RDKit). A later defensive change to clear stale generated outputs is being re-tested. No real QE calculation has been run.
+**Validation status:** Latest GitHub Actions run passed on commit `bb38b9fde288bbbbebcc28ad5bdefaf76d594b88` (274 passed, 1 skipped with RDKit; 269 passed, 6 skipped without RDKit). The run includes a regression test proving stale `atomic_proj.xml` is not reused. No real QE calculation has been run.
 
 ## 4. Important technical decisions and cautions
 
@@ -134,14 +134,14 @@ The conventional `band_structure` remains based on `bands.x`. Fat-band energies 
 
 ## 7. Test and validation record
 
-Latest completed GitHub Actions run for the parser, execution integration and coordinate reconstruction:
+Latest completed GitHub Actions run for the parser, execution integration, coordinate reconstruction and stale-output regression:
 
 - RDKit-enabled suite: **274 passed, 1 skipped**.
 - Without RDKit: **269 passed, 6 skipped**.
-- Verified commit: `29812cc4ecf96c4ab75bfbadd93f4885b384ec36`.
-- Run: https://github.com/benimprojem/MolecularLab/actions/runs/41090895051
+- Verified code commit: `bb38b9fde288bbbbebcc28ad5bdefaf76d594b88`.
+- Run: https://github.com/benimprojem/MolecularLab/actions/runs/41091007057
 
-The subsequent stale-output cleanup and its regression test are newer than this green run; their CI result must be checked before treating the current HEAD as fully verified.
+The current test matrix is green. This validates synthetic/mocked workflows only, not a real QE solver execution.
 
 Validation levels must be recorded separately:
 
@@ -169,4 +169,4 @@ At the beginning of each new Molecular Lab conversation:
    - exact next step.
 7. Update the README only when the user-facing project capability/status materially changes.
 
-**Active hand-off point:** Fat-band visualization and plot-ready data export. Before starting, check the latest GitHub Actions result for stale-output cleanup commit(s), then continue from `DFTExecutionResult.fat_band_structure`. Do not restart the parser, execution pipeline, chemical graph, crystal foundation or PDOS implementation from scratch.
+**Active hand-off point:** Fat-band visualization and plot-ready data export. CI for the execution pipeline and stale-output regression is green. Continue from `DFTExecutionResult.fat_band_structure`; inspect existing visualization conventions before adding a new plot interface. Do not restart the parser, execution pipeline, chemical graph, crystal foundation or PDOS implementation from scratch.
