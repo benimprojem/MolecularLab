@@ -10,15 +10,18 @@ from math import isfinite
 
 @dataclass(frozen=True, slots=True)
 class KPoint:
-    """Fractional reciprocal-space coordinate and integration weight."""
+    """Three-component reciprocal coordinate (or path distance) and weight."""
     coordinates: tuple[float, float, float]
     weight: float
+    coordinate_system: str = "fractional"
     def __post_init__(self):
         coordinates = tuple(self.coordinates)
         if len(coordinates) != 3 or any(not isfinite(v) for v in coordinates):
             raise ValueError("k-point coordinates must contain three finite values")
         if not isfinite(self.weight) or self.weight <= 0:
             raise ValueError("k-point weight must be finite and positive")
+        if not self.coordinate_system.strip():
+            raise ValueError("k-point coordinate_system cannot be empty")
         object.__setattr__(self, "coordinates", coordinates)
 
 @dataclass(frozen=True, slots=True)
