@@ -9,7 +9,7 @@ Status: Initial project foundation
 
 **Molecular Lab** is a planned Windows desktop environment for exploring molecules, compounds, crystals, and functional materials through computational chemistry and materials-science workflows.
 
-> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, and a syntax-level chemical formula parser. Molecular search, structure generation, geometry optimization, stability assessment, and material-property calculations are not implemented yet.
+> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, and a bounded composition enumerator. Chemical plausibility filtering, structure generation, geometry optimization, stability assessment, and material-property calculations are not implemented yet.
 
 ## 1. Project goal
 
@@ -114,12 +114,14 @@ MolecularLab/
 │   ├── ARCHITECTURE.md
 │   ├── CHEMICAL_MODEL.md
 │   ├── DATA_MODEL.md
+│   ├── DISCOVERY_ENGINE.md
 │   ├── CALCULATIONS.md
 │   ├── DISCOVERY_ENGINE.md
 │   └── LIMITATIONS.md
 ├── molecular_lab/
 │   ├── core/
 │   ├── chemistry/
+│   ├── engines/
 │   ├── structures/
 │   ├── calculations/
 │   ├── materials/
@@ -148,7 +150,7 @@ MolecularLab/
 - [x] Document the scientific scope and development principles.
 - [x] Define the initial shared domain data contract and foundational Python records.
 - [x] Add the 118-element identity table and initial formula parser (syntax tests added; execution verification pending).
-- [ ] Implement bounded candidate-composition generation.
+- [x] Implement bounded, deterministic composition enumeration (chemical plausibility filtering remains pending).
 - [ ] Add structure generation and validation.
 - [ ] Integrate the first calculation backend.
 - [ ] Build the first usable desktop workflow.
