@@ -4,7 +4,8 @@ Version: 0.1 | Rev.: 04
 """
 
 from molecular_lab.calculations.pdos_analysis import (
-    PDOSWindowSummary, ProjectedDOSAggregate, aggregate_projected_dos,
+    BandEdgePDOSAnalysis, PDOSWindowSummary, ProjectedDOSAggregate,
+    aggregate_projected_dos, analyze_band_edge_pdos,
     integrate_pdos_window, summarize_pdos_window,
 )
 from molecular_lab.calculations.dft_settings import (
@@ -39,7 +40,8 @@ from molecular_lab.calculations.execution import (
 )
 
 __all__ = [
-    "PDOSWindowSummary", "ProjectedDOSAggregate", "aggregate_projected_dos",
+    "BandEdgePDOSAnalysis", "PDOSWindowSummary", "ProjectedDOSAggregate",
+    "aggregate_projected_dos", "analyze_band_edge_pdos",
     "integrate_pdos_window", "summarize_pdos_window",
     "ASEBridgeError", "ASEUnavailableError", "ASEUnsupportedStructureError",
     "ase_availability", "to_ase_atoms",
