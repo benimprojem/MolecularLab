@@ -28,3 +28,12 @@ Spin-up and spin-down are deliberately not merged. Consumers can form a total sp
 `summarize_pdos_window(data, lower_ev, upper_ev, group_by="element")` first aggregates records by atom or element, angular momentum and spin, then integrates the local-DOS and angular-component curves over the requested energy interval. It returns one `PDOSWindowSummary` per element/atom, orbital angular momentum and spin channel. This makes s/p/d/f contributions and spin-up/down contributions directly comparable without merging distinct channels.
 
 The interval must lie inside the sampled energy grid; boundaries are linearly interpolated. The local-DOS and angular-component integrals are reported separately as a consistency check. They are not automatically equal to a total-DOS integral, and their difference must not be interpreted as a measured charge transfer.
+
+
+## Band-edge and orbital-character correlation
+
+`analyze_band_edge_pdos(bands, pdos, window_ev=0.25)` assesses the sampled band gap, then integrates element/atom, angular-momentum and spin-resolved PDOS in two edge windows: immediately below the VBM and immediately above the CBM. The result retains the band-gap assessment and separate VBM/CBM summaries.
+
+The PDOS energy shift (`pdos_energy_shift_ev`) is added to every PDOS energy to express it on the band-energy reference. Use zero only when both datasets already share the same energy reference. Structures, calculation settings, pseudopotentials and energy alignment must be compatible; the helper cannot establish this automatically. Both windows must be covered by the PDOS grid or analysis raises an error.
+
+This is an energy-window correlation, not k-resolved band projection. It indicates which supplied atomic-orbital projections contribute near the energy of a sampled band edge, but it does not identify the orbital character of a particular band at a particular k-point. That requires k-resolved band-projection output. Metals and unresolved gaps are rejected.
