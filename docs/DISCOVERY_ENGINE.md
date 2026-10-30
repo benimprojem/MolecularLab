@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 01 -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 02 -->
 
 # Discovery Engine
 
@@ -46,7 +46,17 @@ For an H/O search with total atom counts bounded from 1 through 4, the iterator 
 
 **Important:** enumeration is not a chemical validation step. A generated composition is not automatically a molecule, crystal, stable compound, experimentally known substance, or synthesizable material.
 
-### 2.3 Chemical plausibility filters — planned
+### 2.3 Initial composition diagnostics — implemented
+
+The first advisory diagnostic module is molecular_lab/chemistry/plausibility.py. It reports:
+
+- Total electron count and even/odd parity when net charge is specified.
+- Whether a formal oxidation-state assignment can balance the supplied charge using a limited curated list of common states.
+- Whether that check is inconclusive because one or more elements are not covered.
+
+These checks are deliberately conservative. Electron parity is useful later for spin-state enumeration but is not a stability test. A matching oxidation-state assignment is not proof of bonding or existence. Failure to find a match is not a universal impossibility rule and must only trigger review. The current reference table is incomplete and is not a definitive list of allowed oxidation states.
+
+### 2.4 Further chemical plausibility filters — planned
 
 Potential filters may consider electron count, charge consistency, oxidation-state and valence patterns, bond-order and coordination constraints, known motifs, geometric feasibility, reference databases, and method applicability.
 
