@@ -129,7 +129,7 @@ def test_spin_orbit_is_not_forced_to_mean_magnetic_spin_polarization():
 def test_structured_band_path_and_dos_settings_validation():
     path = BandPath((
         BandPathPoint((0.0, 0.0, 0.0), "GAMMA", 20),
-        BandPathPoint((0.5, 0.0, 0.0), "X", 20),
+        BandPathPoint((0.5, 0.0, 0.0), "X", 0),
     ))
     assert path.sample_count == 21
     with pytest.raises(ValueError):
