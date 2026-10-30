@@ -288,3 +288,6 @@ The next step is to add cross-checks against the crystal structure itself
 (atom count and per-index element identity) at the QE workflow boundary, then
 prepare a small reference-data comparison when a real QE environment and UPF
 are available. Real QE execution and scientific convergence remain pending.
+
+
+**Structure identity cross-check (2026-10-30):** The QE fat-band execution path now passes the input CrystalStructure into the dataset builder. The builder verifies that projection atom indices cover every input site and that each one-based QE atom index carries the same element as the corresponding input site. Added a regression test for matching and deliberately swapped Fe/O site order. This protects the projection join from a subtle but serious atom-order mismatch; it does not validate the physical correctness of the QE pseudopotential projectors.
