@@ -65,3 +65,20 @@ def test_rejects_empty_or_fully_nonperiodic_cell():
 def test_partial_occupancy_is_retained():
     sites = (CrystalSite("Na", "Na", (0, 0, 0), 0.5), CrystalSite("K", "K", (0, 0, 0), 0.5))
     assert make_structure(sites=sites).composition_by_site == {"K": 0.5, "Na": 0.5}
+
+
+def test_fractional_to_cartesian_coordinate_conversion():
+    structure = make_structure(
+        lattice_vectors_angstrom=((2.0, 0.0, 0.0), (1.0, 3.0, 0.0), (0.0, 0.0, 4.0)),
+        sites=(CrystalSite("X", "Si", (0.5, 0.5, 0.25)),),
+    )
+    assert structure.cartesian_coordinates_angstrom == ((1.5, 1.5, 1.0),)
+
+
+def test_disordered_species_occupancy_cannot_exceed_one():
+    sites = (
+        CrystalSite("Na", "Na", (0.0, 0.0, 0.0), 0.75),
+        CrystalSite("K", "K", (1.0, 0.0, 0.0), 0.5),
+    )
+    with pytest.raises(ValueError, match="cannot sum above one"):
+        make_structure(sites=sites)
