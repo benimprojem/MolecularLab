@@ -6,6 +6,7 @@ Version: 0.1 | Rev.: 04
 from molecular_lab.materials.electronic_structure import (
     BandChannelData, BandGapAssessment, BandGapStatus, BandStructureData,
     DensityOfStatesChannel, DensityOfStatesData, KPoint, assess_band_gap,
+    ProjectedDOSComponent, ProjectedDOSRecord, ProjectedDensityOfStatesData,
 )
 from molecular_lab.materials.electrical_classification import (
     ElectricalBehavior, ElectricalBehaviorAssessment, ElectricalClassificationCriteria,
@@ -23,6 +24,7 @@ from molecular_lab.materials.response import (
 __all__ = [
     "BandChannelData", "BandGapAssessment", "BandGapStatus", "BandStructureData",
     "DensityOfStatesChannel", "DensityOfStatesData", "KPoint", "assess_band_gap",
+    "ProjectedDOSComponent", "ProjectedDOSRecord", "ProjectedDensityOfStatesData",
     "ComplexValue", "ConvergenceInfo", "ConvergenceStatus", "ElectricalBehavior",
     "ElectricalBehaviorAssessment", "ElectricalClassificationCriteria", "ElectricalMetric",
     "MaterialResponseDataset", "MetamaterialDesign", "MetamaterialMechanism",
