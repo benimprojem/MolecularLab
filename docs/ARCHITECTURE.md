@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 14 | Status: SCF and fixed-cell RELAX execution --> 
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 14 | Status: SCF, fixed-cell RELAX and variable-cell VC_RELAX execution --> 
 
 # System Architecture
 
