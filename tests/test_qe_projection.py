@@ -255,3 +255,43 @@ def test_fatband_dataset_rejects_duplicate_state_and_orbital_records():
     duplicate = replace(point, contributions=point.contributions + (point.contributions[0],))
     with pytest.raises(ValueError, match="duplicate atom/orbital"):
         replace(dataset, points=(duplicate,))
+
+
+def test_fatband_builder_checks_projection_atom_identity_against_crystal():
+    from molecular_lab.structures.crystal import CrystalSite, CrystalStructure
+
+    xml = """<ATOMIC_PROJECTIONS>
+      <HEADER NUMBER_OF_BANDS="1" NUMBER_OF_K-POINTS="1"
+              NUMBER_OF_SPIN_COMPONENTS="1" NUMBER_OF_ATOMIC_WFC="3"/>
+      <EIGENSTATES><PROJS>
+        <ATOMIC_WFC index="1">0.5 0.0</ATOMIC_WFC>
+        <ATOMIC_WFC index="2">0.0 0.5</ATOMIC_WFC>
+        <ATOMIC_WFC index="3">0.1 0.2</ATOMIC_WFC>
+      </PROJS></EIGENSTATES>
+    </ATOMIC_PROJECTIONS>"""
+    projections = parse_qe_atomic_proj_xml(xml, STATE_OUTPUT)
+    bands = BandStructureData(
+        kpoints=(KPoint((0.0, 0.0, 0.0), 1.0),),
+        channels=(BandChannelData("total", ((0.0,),)),),
+    )
+    structure = CrystalStructure(
+        structure_id="FeO-test",
+        lattice_vectors_angstrom=((4.0, 0.0, 0.0), (0.0, 4.0, 0.0), (0.0, 0.0, 4.0)),
+        sites=(
+            CrystalSite("Fe1", "Fe", (0.0, 0.0, 0.0)),
+            CrystalSite("O1", "O", (0.5, 0.5, 0.5)),
+        ),
+    )
+    result = build_fatband_dataset(bands, projections, structure=structure)
+    assert len(result.points) == 1
+
+    wrong_order = CrystalStructure(
+        structure_id="OFe-test",
+        lattice_vectors_angstrom=structure.lattice_vectors_angstrom,
+        sites=(
+            CrystalSite("O1", "O", (0.0, 0.0, 0.0)),
+            CrystalSite("Fe1", "Fe", (0.5, 0.5, 0.5)),
+        ),
+    )
+    with pytest.raises(ValueError, match="input structure site 1"):
+        build_fatband_dataset(bands, projections, structure=wrong_order)
