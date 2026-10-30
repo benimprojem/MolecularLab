@@ -14,7 +14,7 @@ from molecular_lab.calculations.ase_bridge import (
     ase_availability, to_ase_atoms,
 )
 from molecular_lab.calculations.quantum_espresso import (
-    PreparedQEInput, PreparedQEDOSInput, QuantumEspressoInputError,
+    PreparedQEInput, PreparedQEPostprocessInput, QuantumEspressoInputError,
     prepare_pw_input, prepare_qe_bands_postprocess_input,
     prepare_qe_dos_postprocess_input,
 )
@@ -35,7 +35,7 @@ __all__ = [
     "DFTCalculationSettings", "DFTOutput", "DFTTask",
     "EnergyCutoff", "EnergyUnit", "KPointMesh", "KPointScheme",
     "PseudopotentialReference", "SmearingScheme", "SmearingSettings",
-    "PreparedQEInput", "PreparedQEDOSInput", "QuantumEspressoInputError",
+    "PreparedQEInput", "PreparedQEPostprocessInput", "QuantumEspressoInputError",
     "prepare_pw_input", "prepare_qe_bands_postprocess_input",
     "prepare_qe_dos_postprocess_input",
     "GPAWInputError", "GPAWUnavailableError", "PreparedGPAWInput",
