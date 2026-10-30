@@ -4,8 +4,9 @@ Version: 0.1 | Rev.: 04
 """
 
 from molecular_lab.calculations.dft_settings import (
-    ConvergenceSettings, DFTCalculationSettings, DFTOutput, DFTTask,
-    EnergyCutoff, EnergyUnit, KPointMesh, KPointScheme, PseudopotentialReference,
+    BandPath, BandPathPoint, ConvergenceSettings, DOSSettings,
+    DFTCalculationSettings, DFTOutput, DFTTask, EnergyCutoff, EnergyUnit,
+    KPointMesh, KPointScheme, PseudopotentialReference,
     SmearingScheme, SmearingSettings,
 )
 from molecular_lab.calculations.ase_bridge import (
@@ -13,7 +14,8 @@ from molecular_lab.calculations.ase_bridge import (
     ase_availability, to_ase_atoms,
 )
 from molecular_lab.calculations.quantum_espresso import (
-    PreparedQEInput, QuantumEspressoInputError, prepare_pw_input,
+    PreparedQEInput, PreparedQEDOSInput, QuantumEspressoInputError,
+    prepare_pw_input, prepare_qe_dos_postprocess_input,
 )
 from molecular_lab.calculations.gpaw import (
     GPAWInputError, GPAWUnavailableError, PreparedGPAWInput,
@@ -28,10 +30,12 @@ from molecular_lab.calculations.execution import (
 __all__ = [
     "ASEBridgeError", "ASEUnavailableError", "ASEUnsupportedStructureError",
     "ase_availability", "to_ase_atoms",
-    "ConvergenceSettings", "DFTCalculationSettings", "DFTOutput", "DFTTask",
+    "BandPath", "BandPathPoint", "ConvergenceSettings", "DOSSettings",
+    "DFTCalculationSettings", "DFTOutput", "DFTTask",
     "EnergyCutoff", "EnergyUnit", "KPointMesh", "KPointScheme",
     "PseudopotentialReference", "SmearingScheme", "SmearingSettings",
-    "PreparedQEInput", "QuantumEspressoInputError", "prepare_pw_input",
+    "PreparedQEInput", "PreparedQEDOSInput", "QuantumEspressoInputError",
+    "prepare_pw_input", "prepare_qe_dos_postprocess_input",
     "GPAWInputError", "GPAWUnavailableError", "PreparedGPAWInput",
     "build_optimization_target", "create_gpaw_calculator", "prepare_gpaw_input",
     "DFTExecutionResult", "DFTExecutionStatus",
