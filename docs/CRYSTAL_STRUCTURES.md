@@ -18,7 +18,7 @@ For fractional coordinate f and row-vector lattice matrix A, Cartesian position 
 
 ## Atomic sites and occupancy
 
-Each site has a stable ID, element symbol, fractional coordinates, occupancy in (0, 1], and optional oxidation state, magnetic moment in Bohr magnetons, and label. Disordered structures with multiple species at one crystallographic position are represented by separate records sharing the same coordinates. The initial model does not yet enforce that their occupancies sum to at most one.
+Each site has a stable ID, element symbol, fractional coordinates, occupancy in (0, 1], and optional oxidation state, magnetic moment in Bohr magnetons, and label. Disordered structures with multiple species at one crystallographic position are represented by separate records sharing the same coordinates. The model groups positions modulo periodic translations and rejects combined occupancies above one. This is a structural consistency check; it does not resolve occupational disorder or generate an ordered supercell.
 
 The occupancy-weighted composition is a convenience summary, not an integer formula or proof of a chemically valid ordered supercell.
 
@@ -34,6 +34,6 @@ The structure may retain a source, space-group label, magnetic-ordering descript
 
 ## Current status
 
-Implemented: standard-library crystal/site/defect records, lattice-volume validation, fractional-coordinate preservation, occupancy-weighted composition summary, and unit tests.
+Implemented: standard-library crystal/site/defect records, lattice-volume validation, fractional-to-Cartesian conversion, fractional-coordinate preservation, periodic-position occupancy validation, occupancy-weighted composition summary, and unit tests.
 
 Not implemented: CIF/POSCAR import/export, symmetry detection, primitive/conventional cell conversion, supercell generation, defect-structure construction, geometry optimization, or DFT execution.
