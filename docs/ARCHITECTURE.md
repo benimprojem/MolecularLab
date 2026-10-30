@@ -36,7 +36,7 @@ The common solver orchestration contract is implemented in `molecular_lab/engine
 - `SolverCapability` declares a solver's supported domains, methods, and optional dependencies.
 - `SolverAvailability` distinguishes a declared adapter from an installed/usable backend.
 - `SolverRegistry` registers adapters, lists availability, matches requests, and dispatches only to a compatible available adapter.
-- `CalculationResult` normalizes success/failure/unsupported/unavailable states and carries scalar outputs or frequency-dependent response datasets.
+- `CalculationResult` normalizes success/failure/unsupported/unavailable states and carries scalar outputs, frequency-dependent response datasets, spin-resolved band structures, and total/projected DOS records.
 
 The four initial domains are electronic structure, electrical transport, magnetic response, and electromagnetic response. This separation prevents accidental use of a solver outside its physical scope. A solver declaration is not evidence that the executable is installed, and an unavailable backend must never produce a fabricated result.
 
