@@ -235,3 +235,21 @@ remain unchanged.
 This is an API usage example, not a validated silicon input deck. Select and
 converge the actual pseudopotentials, cutoffs and k-point sampling for the
 material before interpreting the resulting band structure scientifically.
+
+
+## Real QE smoke-test example
+
+A runnable silicon diamond-primitive-cell example is available at
+`examples/qe_silicon_fatbands.py`. It requires a user-supplied PBE UPF,
+the exact cutoffs recommended for that file, and installed `pw.x`,
+`bands.x` and `projwfc.x` executables. See
+[`docs/QE_REFERENCE_VALIDATION.md`](QE_REFERENCE_VALIDATION.md) for
+environment requirements, invocation, evidence capture and the separate
+convergence checklist. The example is a workflow smoke test, not a converged
+reference band structure.
+
+`DFTCalculationSettings.charge_density_cutoff` can optionally specify QE
+`ecutrho`; when supplied, it is converted to Ry and emitted in the QE
+`SYSTEM` card. The adapter validates that it is not below
+`energy_cutoff`. The application deliberately does not guess a default ratio:
+use the recommendation for the selected pseudopotential.
