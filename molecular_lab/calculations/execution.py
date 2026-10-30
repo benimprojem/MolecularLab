@@ -43,6 +43,7 @@ class DFTExecutionResult:
     stderr: str = ""
     optimized_structure: CrystalStructure | None = None
     forces_ev_per_angstrom: tuple[tuple[float, float, float], ...] = ()
+    stress_gpa: tuple[tuple[float, float, float], ...] | None = None
 
     @property
     def succeeded(self) -> bool:
@@ -61,6 +62,7 @@ _QE_FORCE_RE = re.compile(
 )
 _RY_TO_EV = 13.605693122994
 _BOHR_ANGSTROM = 0.529177210903
+_EV_PER_ANG3_TO_GPA = 160.21766208
 _RY_PER_BOHR_TO_EV_PER_ANGSTROM = _RY_TO_EV / _BOHR_ANGSTROM
 
 
@@ -78,21 +80,28 @@ def _validate_request(
         raise TypeError("settings must be DFTCalculationSettings")
     if settings.task not in (DFTTask.SCF, DFTTask.RELAX):
         raise ValueError("execution currently supports SCF and fixed-cell RELAX only")
-    allowed = (
-        {DFTOutput.TOTAL_ENERGY}
-        if settings.task is DFTTask.SCF
-        else {DFTOutput.TOTAL_ENERGY, DFTOutput.FORCES}
-    )
+    allowed = {
+        DFTTask.SCF: {DFTOutput.TOTAL_ENERGY, DFTOutput.STRESS},
+        DFTTask.RELAX: {DFTOutput.TOTAL_ENERGY, DFTOutput.FORCES, DFTOutput.STRESS},
+        DFTTask.VC_RELAX: {DFTOutput.TOTAL_ENERGY, DFTOutput.FORCES, DFTOutput.STRESS},
+    }.get(settings.task, set())
     unsupported = set(settings.requested_outputs).difference(allowed)
     if unsupported:
-        if settings.task is DFTTask.SCF:
-            raise ValueError("SCF execution currently supports total energy only")
-        raise ValueError("RELAX execution currently supports total energy and forces only")
-    if settings.task is DFTTask.RELAX:
+        raise ValueError(
+            f"{settings.task.value} execution does not support requested outputs: "
+            + ", ".join(sorted(item.value for item in unsupported))
+        )
+    if settings.task in (DFTTask.RELAX, DFTTask.VC_RELAX):
         if not all(structure.periodic_boundary_conditions):
-            raise ValueError("fixed-cell RELAX currently requires 3D periodic boundary conditions")
+            raise ValueError(f"{settings.task.value} currently requires 3D periodic boundary conditions")
         if settings.convergence.force_tolerance_ev_per_angstrom is None:
-            raise ValueError("RELAX requires an explicit force_tolerance_ev_per_angstrom")
+            raise ValueError(f"{settings.task.value} requires an explicit force_tolerance_ev_per_angstrom")
+    if settings.task is DFTTask.VC_RELAX:
+        required = {DFTOutput.TOTAL_ENERGY, DFTOutput.FORCES, DFTOutput.STRESS}
+        if not required.issubset(settings.requested_outputs):
+            raise ValueError("VC_RELAX requires TOTAL_ENERGY, FORCES and STRESS outputs")
+        if settings.convergence.stress_tolerance_gpa is None:
+            raise ValueError("VC_RELAX requires an explicit stress_tolerance_gpa")
 
 
 def _updated_structure(
@@ -188,6 +197,37 @@ def _parse_qe_final_forces(
         for item in final
     )
 
+def _parse_qe_stress(output: str) -> tuple[tuple[float, float, float], ...] | None:
+    """Return the final QE stress tensor in GPa, tension-positive (ASE convention).
+
+    QE prints the stress components in kbar with positive hydrostatic pressure
+    corresponding to compression; negate and divide by ten for GPa.
+    """
+    lines = output.splitlines()
+    blocks = []
+    for index, line in enumerate(lines):
+        lowered = line.lower()
+        if "total" not in lowered or "stress" not in lowered or "(kbar)" not in lowered:
+            continue
+        rows = []
+        for candidate in lines[index + 1:index + 4]:
+            values = candidate.split()
+            if len(values) < 6:
+                rows = []
+                break
+            try:
+                numeric = [_float_token(value) for value in values[:6]]
+            except ValueError:
+                rows = []
+                break
+            rows.append(numeric)
+        if len(rows) == 3:
+            blocks.append(tuple(
+                tuple(-row[column] / 10.0 for column in (3, 4, 5))
+                for row in rows
+            ))
+    return blocks[-1] if blocks else None
+
 
 def execute_quantum_espresso(
     structure: CrystalStructure,
@@ -272,13 +312,13 @@ def execute_quantum_espresso(
         ))
     )
     job_done = "JOB DONE." in output
-    optimized = (
-        _parse_qe_final_structure(output, structure)
-        if settings.task is DFTTask.RELAX else None
-    )
-    forces = (
-        _parse_qe_final_forces(output, len(structure.sites))
-        if settings.task is DFTTask.RELAX else ()
+    structural_task = settings.task in (DFTTask.RELAX, DFTTask.VC_RELAX)
+    optimized = _parse_qe_final_structure(output, structure) if structural_task else None
+    forces = _parse_qe_final_forces(output, len(structure.sites)) if structural_task else ()
+    stress = (
+        _parse_qe_stress(output)
+        if DFTOutput.STRESS in settings.requested_outputs or settings.task is DFTTask.VC_RELAX
+        else None
     )
 
     if completed.returncode != 0:
@@ -290,18 +330,25 @@ def execute_quantum_espresso(
     elif not job_done or not energies:
         status = DFTExecutionStatus.FAILED
         message = "QE output is incomplete: normal completion or total energy was not found."
-    elif settings.task is DFTTask.RELAX and optimized is None:
+    elif structural_task and optimized is None:
         status = DFTExecutionStatus.FAILED
-        message = "QE reported convergence but its final atomic coordinates could not be parsed."
-    elif settings.task is DFTTask.RELAX and len(forces) != len(structure.sites):
+        message = "QE reported convergence but its final atomic coordinates/cell could not be parsed."
+    elif structural_task and len(forces) != len(structure.sites):
         status = DFTExecutionStatus.FAILED
         message = "QE final atomic forces could not be parsed for every site."
+    elif (DFTOutput.STRESS in settings.requested_outputs or settings.task is DFTTask.VC_RELAX) and stress is None:
+        status = DFTExecutionStatus.FAILED
+        message = "QE final stress tensor could not be parsed."
     else:
         status = DFTExecutionStatus.SUCCEEDED
         message = (
             "QE SCF converged and reported a total energy."
             if settings.task is DFTTask.SCF
-            else "QE fixed-cell ionic relaxation converged; final structure and forces were parsed."
+            else (
+                "QE variable-cell relaxation converged; final cell, atomic positions, forces and stress were parsed."
+                if settings.task is DFTTask.VC_RELAX
+                else "QE fixed-cell ionic relaxation converged; final structure and forces were parsed."
+            )
         )
 
     energy_ev = (
@@ -317,7 +364,8 @@ def execute_quantum_espresso(
         stdout=output,
         stderr=completed.stderr or "",
         optimized_structure=optimized if status is DFTExecutionStatus.SUCCEEDED else None,
-        forces_ev_per_angstrom=forces if status is DFTExecutionStatus.SUCCEEDED else (),
+        forces_ev_per_angstrom=forces if structural_task and status is DFTExecutionStatus.SUCCEEDED else (),
+        stress_gpa=stress if status is DFTExecutionStatus.SUCCEEDED else None,
     )
 
 
@@ -342,7 +390,7 @@ def execute_gpaw(
     _validate_request(structure, settings)
     try:
         from molecular_lab.calculations.gpaw import (
-            create_gpaw_calculator, prepare_gpaw_input,
+            build_optimization_target, create_gpaw_calculator, prepare_gpaw_input,
         )
         from gpaw import __version__ as gpaw_version
         from ase.optimize import BFGS
@@ -358,8 +406,12 @@ def execute_gpaw(
     )
     prepared.atoms.calc = calculator
     try:
-        if settings.task is DFTTask.RELAX:
-            target = prepared.atoms
+        if settings.task in (DFTTask.RELAX, DFTTask.VC_RELAX):
+            target = (
+                build_optimization_target(prepared)
+                if settings.task is DFTTask.VC_RELAX
+                else prepared.atoms
+            )
             optimizer = BFGS(
                 target,
                 logfile=(str(log_file) + ".optimizer") if log_file is not None else "-",
@@ -367,37 +419,64 @@ def execute_gpaw(
             optimizer_converged = optimizer.run(
                 fmax=settings.convergence.force_tolerance_ev_per_angstrom,
             )
-            forces_array = target.get_forces()
+            forces_array = prepared.atoms.get_forces()
             forces = tuple(tuple(float(v) for v in row) for row in forces_array)
             max_force = max(
                 (sum(component * component for component in row) ** 0.5 for row in forces),
                 default=0.0,
             )
-            converged = bool(optimizer_converged) or (
+            force_ok = bool(optimizer_converged) or (
                 max_force <= settings.convergence.force_tolerance_ev_per_angstrom
             )
-            if not converged:
-                return DFTExecutionResult(
-                    "gpaw", DFTExecutionStatus.NOT_CONVERGED,
-                    "GPAW ionic optimizer stopped before reaching the requested force tolerance.",
-                    backend_version=str(gpaw_version),
-                    forces_ev_per_angstrom=forces,
-                )
+            stress = None
+            stress_ok = True
+            if DFTOutput.STRESS in settings.requested_outputs or settings.task is DFTTask.VC_RELAX:
+                stress_array = prepared.atoms.get_stress(voigt=False)
+                stress = tuple(tuple(float(v) * _EV_PER_ANG3_TO_GPA for v in row) for row in stress_array)
+            if settings.task is DFTTask.VC_RELAX:
+                target_pressure = settings.pressure_gpa or 0.0
+                tolerance = settings.convergence.stress_tolerance_gpa
+                residual = [
+                    abs(stress[i][j] + (target_pressure if i == j else 0.0))
+                    for i in range(3) for j in range(3)
+                ]
+                stress_ok = max(residual, default=0.0) <= tolerance
             optimized = _updated_structure(
                 structure,
-                target.cell.array,
-                target.get_scaled_positions(wrap=False),
+                prepared.atoms.cell.array,
+                prepared.atoms.get_scaled_positions(wrap=False),
             )
+            energy = float(prepared.atoms.get_potential_energy())
+            if not force_ok or not stress_ok:
+                reason = (
+                    "force tolerance" if not force_ok
+                    else "stress tolerance (post-checked against the requested external pressure)"
+                )
+                return DFTExecutionResult(
+                    "gpaw", DFTExecutionStatus.NOT_CONVERGED,
+                    f"GPAW optimization stopped before satisfying the requested {reason}.",
+                    total_energy_ev=energy,
+                    converged=False,
+                    backend_version=str(gpaw_version),
+                    optimized_structure=optimized,
+                    forces_ev_per_angstrom=forces,
+                    stress_gpa=stress,
+                )
         else:
             energy = float(prepared.atoms.get_potential_energy())
             forces = ()
             optimized = None
+            stress = None
+            if DFTOutput.STRESS in settings.requested_outputs:
+                stress_array = prepared.atoms.get_stress(voigt=False)
+                stress = tuple(tuple(float(v) * _EV_PER_ANG3_TO_GPA for v in row) for row in stress_array)
             scf_state = getattr(getattr(calculator, "scf", None), "converged", None)
             if scf_state is False:
                 return DFTExecutionResult(
                     "gpaw", DFTExecutionStatus.NOT_CONVERGED,
                     "GPAW returned an energy but its SCF state is not converged.",
                     backend_version=str(gpaw_version),
+                    stress_gpa=stress,
                 )
             return DFTExecutionResult(
                 "gpaw", DFTExecutionStatus.SUCCEEDED,
@@ -406,8 +485,8 @@ def execute_gpaw(
                 total_energy_ev=energy,
                 converged=scf_state is True,
                 backend_version=str(gpaw_version),
+                stress_gpa=stress,
             )
-        energy = float(target.get_potential_energy())
     except Exception as exc:
         return DFTExecutionResult(
             "gpaw", DFTExecutionStatus.FAILED,
@@ -417,12 +496,17 @@ def execute_gpaw(
 
     return DFTExecutionResult(
         "gpaw", DFTExecutionStatus.SUCCEEDED,
-        "GPAW fixed-cell ionic relaxation converged; final structure and forces were collected.",
+        (
+            "GPAW variable-cell relaxation converged; final cell, atomic positions, forces and stress were collected."
+            if settings.task is DFTTask.VC_RELAX
+            else "GPAW fixed-cell ionic relaxation converged; final structure and forces were collected."
+        ),
         total_energy_ev=energy,
         converged=True,
         backend_version=str(gpaw_version),
         optimized_structure=optimized,
         forces_ev_per_angstrom=forces,
+        stress_gpa=stress,
     )
 
 
