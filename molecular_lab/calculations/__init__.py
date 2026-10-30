@@ -1,6 +1,6 @@
 """Calculation interfaces and computational backend adapters.
 
-Version: 0.1 | Rev.: 02
+Version: 0.1 | Rev.: 03
 """
 
 from molecular_lab.calculations.dft_settings import (
@@ -19,6 +19,10 @@ from molecular_lab.calculations.gpaw import (
     GPAWInputError, GPAWUnavailableError, PreparedGPAWInput,
     build_optimization_target, create_gpaw_calculator, prepare_gpaw_input,
 )
+from molecular_lab.calculations.execution import (
+    DFTExecutionResult, DFTExecutionStatus,
+    execute_gpaw_scf, execute_quantum_espresso_scf,
+)
 
 __all__ = [
     "ASEBridgeError", "ASEUnavailableError", "ASEUnsupportedStructureError",
@@ -29,4 +33,6 @@ __all__ = [
     "PreparedQEInput", "QuantumEspressoInputError", "prepare_pw_input",
     "GPAWInputError", "GPAWUnavailableError", "PreparedGPAWInput",
     "build_optimization_target", "create_gpaw_calculator", "prepare_gpaw_input",
+    "DFTExecutionResult", "DFTExecutionStatus",
+    "execute_gpaw_scf", "execute_quantum_espresso_scf",
 ]
