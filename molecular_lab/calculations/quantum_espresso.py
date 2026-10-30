@@ -201,7 +201,15 @@ def prepare_pw_input(
     if settings.task in (DFTTask.RELAX, DFTTask.VC_RELAX):
         sections.extend(["&IONS", "  ion_dynamics = 'bfgs'", "/", ""])
     if settings.task is DFTTask.VC_RELAX:
-        sections.extend(["&CELL", "  cell_dynamics = 'bfgs'"])
+        if settings.convergence.stress_tolerance_gpa is None:
+            raise QuantumEspressoInputError(
+                "VC_RELAX requires an explicit stress_tolerance_gpa"
+            )
+        sections.extend([
+            "&CELL",
+            "  cell_dynamics = 'bfgs'",
+            f"  press_conv_thr = {_number(settings.convergence.stress_tolerance_gpa * 10.0)}",
+        ])
         if settings.pressure_gpa is not None:
             sections.append(f"  press = {_number(settings.pressure_gpa * 10.0)}")
         sections.extend(["/", ""])
