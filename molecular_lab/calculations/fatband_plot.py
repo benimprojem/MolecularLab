@@ -90,8 +90,14 @@ class FatBandPlotData:
             raise ValueError("unsupported fat-band normalization")
         if not isfinite(self.minimum_raw_weight) or self.minimum_raw_weight < 0:
             raise ValueError("minimum_raw_weight must be finite and non-negative")
-        object.__setattr__(self, "series", tuple(self.series))
-        object.__setattr__(self, "symmetry_ticks", tuple(self.symmetry_ticks))
+        series = tuple(self.series)
+        ticks = tuple(self.symmetry_ticks)
+        if any(len(item.points) != len(distances) for item in series):
+            raise ValueError("every plot series must match the k-point distance grid")
+        if any(item.kpoint_index >= len(distances) for item in ticks):
+            raise ValueError("symmetry tick index is outside the k-point grid")
+        object.__setattr__(self, "series", series)
+        object.__setattr__(self, "symmetry_ticks", ticks)
         object.__setattr__(self, "kpoint_distances_inverse_angstrom", distances)
         object.__setattr__(self, "notes", tuple(self.notes))
 
@@ -242,6 +248,9 @@ def prepare_fatband_plot_data(
             aggregate_key = (key, point.band_index, point.spin_channel, point.kpoint_index)
             aggregated[aggregate_key] = aggregated.get(aggregate_key, 0.0) + contribution.raw_weight
 
+    expected_energy_records = len(selected_spins) * len(selected_bands) * len(dataset.kpoints)
+    if len(energies) != expected_energy_records:
+        raise ValueError("fat-band dataset contains duplicate or missing band/k-point/spin records")
     raw_values = tuple(aggregated.values())
     global_max = max(raw_values, default=0.0)
     per_band_max: dict[tuple[str, int], float] = {}
