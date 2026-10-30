@@ -2,7 +2,7 @@ import pytest
 
 from molecular_lab.calculations import gpaw as gpaw_module
 from molecular_lab.calculations.dft_settings import (
-    ConvergenceSettings, DFTCalculationSettings, DFTOutput, DFTTask,
+    ConvergenceSettings, DOSSettings, DFTCalculationSettings, DFTOutput, DFTTask,
     EnergyCutoff, EnergyUnit, KPointMesh, KPointScheme,
     PseudopotentialReference, SmearingScheme, SmearingSettings,
 )
@@ -133,7 +133,11 @@ def test_vc_relax_pressure_converts_to_ev_per_angstrom3(monkeypatch):
 
 @pytest.mark.parametrize("task", [DFTTask.BANDS, DFTTask.DOS])
 def test_bands_and_dos_are_rejected(task):
-    value = settings(task=task, band_path_ref="path:test") if task is DFTTask.BANDS else settings(task=task)
+    value = (
+        settings(task=task, band_path_ref="path:test")
+        if task is DFTTask.BANDS
+        else settings(task=task, dos=DOSSettings(-5.0, 5.0))
+    )
     with pytest.raises(GPAWInputError, match="supports SCF"):
         prepare_gpaw_input(crystal(), value)
 
