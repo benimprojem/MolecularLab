@@ -1,0 +1,42 @@
+# DFT Calculation Settings
+
+## Purpose
+
+This module defines backend-neutral input settings for periodic density-functional-theory (DFT) calculations. It is a data contract, not a DFT engine. It does not execute calculations, choose scientifically adequate parameters, download pseudopotentials, or claim that a selected backend supports a requested option.
+
+Implementation: `molecular_lab/calculations/dft_settings.py`.
+
+## Settings represented
+
+- **Task:** SCF, fixed-cell relaxation, variable-cell relaxation, band calculation, or DOS task.
+- **Exchange-correlation:** explicit functional identifier (for example PBE, PBEsol, SCAN, r2SCAN, or HSE06). The identifier is not a backend support guarantee.
+- **Plane-wave energy cutoff:** positive finite value with eV, Ry, or Ha unit and explicit conversion helpers.
+- **Brillouin-zone sampling:** three-dimensional integer mesh, Monkhorst-Pack or Gamma-centered scheme, and explicit shift.
+- **Spin:** collinear spin-polarized flag and a separate spin-orbit-coupling flag. SOC does not imply a magnetic state; non-collinear/spinor details remain backend-adapter concerns.
+- **Smearing:** optional explicit scheme and energy width. No automatic smearing choice is made.
+- **Convergence:** energy tolerance, optional force and density tolerances, and maximum SCF iterations.
+- **Pseudopotential references:** element, file name, family, source, optional valence electron count, checksum, and license metadata.
+- **Outputs:** total energy, forces, stress, band structure, DOS, charge density, and magnetic moments.
+- **Conditions:** optional temperature and pressure metadata.
+- **Band path:** a separate explicit reference for band-path tasks; a uniform mesh is not treated as a high-symmetry path.
+
+## Validation
+
+- Values and units are validated; cutoffs convert between eV, Ry, and Ha.
+- K-point grids require three positive integer counts.
+- A structure-aware check requires one k-point along each non-periodic axis and checks exact pseudopotential element coverage.
+- Pseudopotential references are immutable as a mapping and must match their element keys.
+- Band tasks require an explicit band-path reference.
+- SOC is represented independently from magnetic spin polarization.
+
+## Scientific boundaries
+
+Cutoff and k-point convergence are material-, property-, pseudopotential-, and method-dependent. The model intentionally supplies no universal recommended cutoff or mesh. A backend adapter must validate its own supported functionals, pseudopotential formats/families, smearing methods, relativistic treatment, and task combinations.
+
+The common model does not yet represent a complete high-symmetry path, projected-orbital selection, Hubbard U, hybrid-functional exact-exchange controls, van der Waals correction parameters, electric-field boundary conditions, or finite-size corrections for charged defects. These should be added as explicit typed settings when a concrete workflow requires them, rather than as undocumented free-form strings.
+
+A successful SCF convergence is not proof of structural, thermodynamic, or kinetic stability. A band gap is not by itself proof of measured conductivity or device suitability.
+
+## Next integration
+
+Implement backend-specific capability declarations and input translators (initial candidates: Quantum ESPRESSO and GPAW). The adapter must preserve units and provenance and return an explicit unsupported/unavailable status instead of silently substituting methods. Actual execution should only be enabled after dependency and pseudopotential availability checks.
