@@ -2,7 +2,7 @@
 Local reference-molecule lookup and identity matching.
 
 Version: 0.1
-Rev.: 00
+Rev.: 01
 Status: Initial offline reference catalogue; no universal structure canonicalizer.
 
 Formula matches identify possible known records, not exact molecular identity.
