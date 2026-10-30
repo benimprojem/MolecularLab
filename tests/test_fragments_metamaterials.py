@@ -129,3 +129,80 @@ def test_metamaterial_design_rejects_invalid_wavelength_band():
             wavelength_band_m=(2e-6, 1e-6),
             target_properties=("target",),
         )
+
+
+
+def test_multiphysics_property_targets_cover_optical_magnetic_and_electrical():
+    from molecular_lab.materials.metamaterials import (
+        MetamaterialPropertyDomain,
+        MetamaterialPropertyTarget,
+        TargetRelation,
+    )
+
+    cell = MetamaterialUnitCell("Coupled cell", "hybrid_resonator", 3, (1e-6, 1e-6, 1e-6))
+    design = MetamaterialDesign(
+        design_id="meta-multiphysics-001",
+        mechanism=MetamaterialMechanism.HYBRID,
+        unit_cell=cell,
+        wavelength_band_m=(1.0e-6, 2.0e-6),
+        property_targets=(
+            MetamaterialPropertyTarget(
+                MetamaterialPropertyDomain.OPTICAL,
+                "effective_refractive_index",
+                TargetRelation.APPROACH,
+                "1",
+                target_value=-1.0,
+                spectral_band_m=(1.2e-6, 1.6e-6),
+            ),
+            MetamaterialPropertyTarget(
+                MetamaterialPropertyDomain.MAGNETIC,
+                "relative_permeability",
+                TargetRelation.MAXIMIZE,
+                "1",
+                minimum=1.5,
+            ),
+            MetamaterialPropertyTarget(
+                MetamaterialPropertyDomain.ELECTRICAL,
+                "electrical_conductivity",
+                TargetRelation.WITHIN_RANGE,
+                "S/m",
+                minimum=1e3,
+                maximum=1e5,
+            ),
+            MetamaterialPropertyTarget(
+                MetamaterialPropertyDomain.ELECTRONIC_STRUCTURE,
+                "band_gap",
+                TargetRelation.WITHIN_RANGE,
+                "eV",
+                minimum=0.5,
+                maximum=2.0,
+            ),
+        ),
+    )
+    assert len(design.property_targets) == 4
+    assert design.property_targets[0].target_value == -1.0
+    assert design.property_targets[2].unit == "S/m"
+
+
+def test_property_target_requires_valid_target_range():
+    from molecular_lab.materials.metamaterials import (
+        MetamaterialPropertyDomain,
+        MetamaterialPropertyTarget,
+        TargetRelation,
+    )
+
+    with pytest.raises(ValueError, match="within_range"):
+        MetamaterialPropertyTarget(
+            MetamaterialPropertyDomain.ELECTRICAL,
+            "electrical_conductivity",
+            TargetRelation.WITHIN_RANGE,
+            "S/m",
+            minimum=10.0,
+        )
+    with pytest.raises(ValueError, match="target_value"):
+        MetamaterialPropertyTarget(
+            MetamaterialPropertyDomain.OPTICAL,
+            "refractive_index",
+            TargetRelation.APPROACH,
+            "1",
+        )
