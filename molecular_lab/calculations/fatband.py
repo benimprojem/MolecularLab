@@ -6,6 +6,7 @@ from math import isfinite
 
 from molecular_lab.calculations.qe_projection import QEAtomicProjectionData
 from molecular_lab.materials.electronic_structure import BandStructureData, KPoint
+from molecular_lab.structures.crystal import CrystalStructure
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,6 +125,8 @@ def _orbital_label(angular_momentum: int, magnetic_number: int | None) -> str:
 def build_fatband_dataset(
     bands: BandStructureData,
     projections: QEAtomicProjectionData,
+    *,
+    structure: CrystalStructure | None = None,
 ) -> FatBandDataset:
     """Join projections to energies by k-point order, band index and spin.
 
@@ -132,6 +135,29 @@ def build_fatband_dataset(
     it cannot prove coordinate identity when the projection file omits a
     reciprocal-space grid.
     """
+    if structure is not None:
+        expected_elements = {
+            index: site.element for index, site in enumerate(structure.sites, start=1)
+        }
+        observed_elements: dict[int, str] = {}
+        for wavefunction in projections.atomic_wavefunctions:
+            previous = observed_elements.setdefault(wavefunction.atom_index, wavefunction.element)
+            if previous != wavefunction.element:
+                raise ValueError(
+                    f"Projection metadata has conflicting elements for atom {wavefunction.atom_index}"
+                )
+        if set(observed_elements) != set(expected_elements):
+            raise ValueError(
+                "Projection atom indices do not cover the input crystal structure "
+                f"({len(observed_elements)} projector atoms vs {len(expected_elements)} structure sites)"
+            )
+        for atom_index, expected_element in expected_elements.items():
+            if observed_elements[atom_index] != expected_element:
+                raise ValueError(
+                    f"Projection atom {atom_index} is {observed_elements[atom_index]}, "
+                    f"but input structure site {atom_index} is {expected_element}"
+                )
+
     if len(bands.kpoints) != projections.number_of_kpoints:
         raise ValueError("Band structure and atomic projections have different k-point counts")
     if len(bands.channels) != len(projections.spin_channels):
