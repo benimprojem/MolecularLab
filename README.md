@@ -1,7 +1,7 @@
 <!--
 Project: Molecular Lab
 Version: 0.1
-Rev.: 10
+Rev.: 11
 Status: Initial project foundation
 -->
 
@@ -9,7 +9,7 @@ Status: Initial project foundation
 
 **Molecular Lab** is a planned Windows desktop environment for exploring molecules, compounds, crystals, and functional materials through computational chemistry and materials-science workflows.
 
-> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, a bounded composition enumerator, advisory composition diagnostics, restricted bond-order-aware acyclic and unicyclic molecular graph prototypes, plus a linear fused-acene graph prototype, a small offline reference-molecule catalogue, an optional RDKit adapter that identifies generated graphs against that catalogue, and an integrated bounded forward-discovery pipeline. General structure generation beyond the bounded prototypes (including non-linear fused, bridged, spiro, and heteroaromatic systems), geometry optimization, stability assessment, and material-property calculations are not implemented yet.
+> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, a bounded composition enumerator, advisory composition diagnostics, restricted bond-order-aware acyclic and unicyclic molecular graph prototypes, plus registered fused-benzenoid graph prototypes including anthracene and phenanthrene, a small offline reference-molecule catalogue, an optional RDKit adapter that identifies generated graphs against that catalogue, and an integrated bounded forward-discovery pipeline. General structure generation beyond the bounded prototypes (including unregistered fused layouts, bridged, spiro, and heteroaromatic systems), geometry optimization, stability assessment, and material-property calculations are not implemented yet.
 
 ## 1. Project goal
 
@@ -153,7 +153,7 @@ MolecularLab/
 - [x] Add a small offline reference-molecule catalogue with formula, synonym, and InChIKey lookup.
 - [x] Connect restricted graph proposals to catalogue matching, with optional RDKit canonical SMILES/InChIKey generation and formula-only fallback.
 - [x] Integrate composition enumeration, diagnostics, reference lookup, graph proposals, and structure identification into one bounded forward-discovery workflow.
-- [x] Add an initial linear fused-acene graph prototype for naphthalene/anthracene-family structures (Kekulé representations; not a general fused-ring engine).
+- [x] Add registered fused-benzenoid graph prototypes for naphthalene, anthracene, phenanthrene, and bounded longer linear acenes (Kekulé representations; not a general fused-ring engine).
 - [ ] Expand structure generation and validation beyond the restricted prototype.
 - [ ] Add optional PubChem synchronization/import with rate limits, caching, and provenance retention.
 - [ ] Integrate the first calculation backend.
