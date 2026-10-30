@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 12 | Status: Initial SCF execution layer --> 
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 13 | Status: SCF and fixed-cell RELAX execution --> 
 
 # System Architecture
 
@@ -39,9 +39,10 @@ The common solver orchestration contract is implemented in `molecular_lab/engine
 - The optional ASE bridge preserves cell vectors, fractional positions, PBC flags, and site metadata. Partial occupancy and defect annotations are rejected until explicit ordered structures are materialized.
 - The Quantum ESPRESSO adapter generates `pw.x` input decks for SCF/RELAX/VC-RELAX. It does not launch QE during input preparation and rejects SOC, site-specific magnetic initialization, unsupported outputs, BANDS/DOS workflows, and unsupported k-point conventions.
 - The GPAW adapter prepares ASE Atoms and GPAW calculator parameters for SCF/RELAX/VC-RELAX, and can instantiate a calculator or ASE optimization target. GPAW uses local PAW setups; QE-style pseudopotential file references are deliberately not consumed.
-- The initial explicit execution API lives in `molecular_lab/calculations/execution.py`. It currently runs SCF total-energy requests only: QE is launched as a subprocess with a timeout and preflight checks for its executable and referenced UPF files; GPAW is invoked lazily through ASE's calculator API. No job is launched during module import or input preparation.
-- QE execution is marked successful only when the process exits normally, its output contains the SCF convergence marker and `JOB DONE.`, and a total energy is parsed. GPAW's convergence is marked confirmed only if the installed calculator exposes a positive SCF convergence flag; an energy with an unavailable convergence flag is explicitly distinguished.
-- Both execution paths normalize total energy to eV and retain backend identity/version where available. The current result record is a first execution slice, not yet the full scientific provenance record required for persisted publication-quality results.
+- The common explicit execution entry point is `execute_dft_calculation` in `molecular_lab/calculations/execution.py`. It dispatches to QE or GPAW for SCF and fixed-cell ionic RELAX. QE runs `pw.x` as a subprocess with a timeout and preflight checks for its executable and referenced UPF files. GPAW is invoked lazily through ASE's calculator API and uses ASE BFGS for ionic relaxation.
+- Successful SCF results contain total energy in eV. Successful RELAX results additionally contain a new optimized `CrystalStructure` and per-site forces in eV/angstrom. The input structure remains unchanged. QE RELAX is accepted only when the geometry convergence marker, normal job completion, final energy, final coordinates, and all final atomic forces are present. GPAW RELAX is accepted only when ASE's optimizer reaches the explicit force threshold.
+- RELAX currently requires 3D periodicity and an explicit force tolerance. Variable-cell optimization, stress normalization, BANDS/DOS, automatic MPI launch, scheduler integration, cancellation, and checkpoint/restart remain unsupported.
+- The older `execute_quantum_espresso_scf` and `execute_gpaw_scf` functions remain as SCF-only compatibility wrappers. No job is launched during module import or input preparation.
 
 ## Periodic structure contract
 
@@ -57,7 +58,7 @@ Each optional adapter imports its scientific dependencies lazily. The common sol
 
 A backend exception is converted to an explicit failed calculation result at the adapter boundary. A result with a mismatched request ID or solver identity is rejected. Scientific outputs must include units, conditions, method/backend provenance, evidence category, limitations, and convergence information where relevant.
 
-The initial DFT execution entry points are synchronous and deliberately limited. A persistent job queue, cancellation, progress reporting, resource scheduling, retry policy, MPI orchestration, checkpoint/restart, and distributed execution remain application-layer work and must not be simulated by this registry.
+The DFT execution API is synchronous and deliberately limited. A persistent job queue, cancellation, progress reporting, resource scheduling, retry policy, MPI orchestration, checkpoint/restart, and distributed execution remain application-layer work and must not be simulated by this registry.
 
 ## Design requirements
 
@@ -77,6 +78,6 @@ The UI framework, persistence technology, job scheduler, internal unit conventio
 
 ## Implementation status
 
-Implemented: backend-neutral DFT settings; optional ASE structure conversion; QE `pw.x` input-deck generation and initial SCF runner; GPAW calculator preparation and initial SCF runner; common solver orchestration; molecular and material data models; bounded forward discovery; electronic-structure and periodic crystal records.
+Implemented: backend-neutral DFT settings; optional ASE structure conversion; QE `pw.x` input-deck generation and SCF/fixed-cell RELAX execution; GPAW calculator preparation and SCF/fixed-cell RELAX execution; common backend dispatch; common solver orchestration; molecular and material data models; bounded forward discovery; electronic-structure and periodic crystal records.
 
-Not implemented: geometry optimization execution; BANDS/DOS multi-stage workflows; automatic pseudopotential/PAW setup acquisition and validation; SOC and species/sublattice magnetic initialization; broad crystal structure generation; stability assessment; persistent job queue/cancellation; and actual material-property calculations.
+Not implemented: variable-cell optimization; BANDS/DOS multi-stage workflows; stress normalization; automatic pseudopotential/PAW setup acquisition and validation; SOC and species/sublattice magnetic initialization; broad crystal structure generation; stability assessment; persistent job queue/cancellation; and actual material-property calculations.
