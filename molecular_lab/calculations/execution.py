@@ -14,6 +14,7 @@ import shutil
 import subprocess
 from typing import Sequence
 
+from molecular_lab.calculations.ase_bridge import ASEUnavailableError
 from molecular_lab.calculations.dft_settings import (
     DFTCalculationSettings, DFTOutput, DFTTask,
 )
@@ -113,9 +114,15 @@ def execute_quantum_espresso_scf(
             + ", ".join(missing),
         )
 
-    prepared = prepare_pw_input(
-        structure, settings, outdir="./tmp", pseudo_dir="./pseudo",
-    )
+    try:
+        prepared = prepare_pw_input(
+            structure, settings, outdir="./tmp", pseudo_dir="./pseudo",
+        )
+    except ASEUnavailableError as exc:
+        return DFTExecutionResult(
+            "quantum_espresso", DFTExecutionStatus.BACKEND_UNAVAILABLE,
+            f"ASE is required to prepare the QE input: {exc}",
+        )
     (workdir / "tmp").mkdir(exist_ok=True)
     try:
         completed = subprocess.run(
