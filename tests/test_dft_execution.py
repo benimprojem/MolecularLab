@@ -8,7 +8,8 @@ from molecular_lab.calculations.dft_settings import (
     ConvergenceSettings, DFTCalculationSettings, DFTOutput, DFTTask, EnergyCutoff, EnergyUnit,
     KPointMesh, KPointScheme, PseudopotentialReference,
 )
-from molecular_lab.calculations import quantum_espresso as qe_module\nfrom molecular_lab.calculations import gpaw as gpaw_module
+from molecular_lab.calculations import quantum_espresso as qe_module
+from molecular_lab.calculations import gpaw as gpaw_module
 from molecular_lab.calculations.execution import (
     DFTExecutionStatus, execute_quantum_espresso_scf, execute_quantum_espresso, execute_dft_calculation, execute_gpaw,
 )
