@@ -165,7 +165,7 @@ def test_dos_nscf_and_dos_x_inputs_are_prepared():
     assert "Emin = -10" in dos_input.input_text
     assert "Emax = 20" in dos_input.input_text
     assert "DeltaE = 0.05" in dos_input.input_text
-    assert "degauss = 0.00587989155" in dos_input.input_text
+    assert "degauss = 0.0058798915481" in dos_input.input_text
     assert dos_input.required_saved_calculation == "./tmp/molecular_lab.save"
 
 
