@@ -119,7 +119,6 @@ def test_vc_relax_maps_pressure_gpa_to_kbar():
     assert "tstress = .true." in deck
 
 
-@pytest.mark.parametrize("task", [DFTTask.BANDS, DFTTask.DOS])
 def test_bands_input_uses_explicit_crystal_b_path():
     path = BandPath((
         BandPathPoint((0.0, 0.0, 0.0), "GAMMA", 24),
