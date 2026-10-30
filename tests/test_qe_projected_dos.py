@@ -21,7 +21,7 @@ def test_parse_unpolarized_atomic_pdos_keeps_atom_wavefunction_and_m_components(
     assert (p_record.atom_index, p_record.element, p_record.wavefunction_index) == (2, "Si", 2)
     assert p_record.angular_momentum == 1
     assert [c.component_label for c in p_record.components] == [
-        "m=0", "m=1, cos(phi)", "m=1, sin(phi)"
+        "p_z", "p_x", "p_y"
     ]
     assert p_record.components[2].density_states_per_ev == (0.5, 0.6)
 
