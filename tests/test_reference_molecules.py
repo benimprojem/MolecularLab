@@ -5,6 +5,7 @@ Version: 0.1
 Rev.: 00
 """
 
+from molecular_lab.core.models import Composition
 from molecular_lab.database.reference_molecules import (
     MatchLevel,
     all_reference_molecules,
@@ -51,6 +52,11 @@ def test_formula_only_match_does_not_confuse_isomers():
     result = identify_candidate("C2H6O")
     assert result.match_level is MatchLevel.FORMULA_ONLY
     assert len(result.matches) == 2
+
+
+def test_charged_composition_does_not_match_neutral_seed_records():
+    charged_water = Composition(counts={"H": 2, "O": 1}, net_charge=1)
+    assert lookup_by_formula(charged_water) == ()
 
 
 def test_unknown_formula_is_not_claimed_to_be_a_new_molecule():
