@@ -1,7 +1,7 @@
 <!--
 Project: Molecular Lab
 Version: 0.1
-Rev.: 02
+Rev.: 03
 Status: Initial project foundation
 -->
 
@@ -152,7 +152,8 @@ MolecularLab/
 - [x] Add the 118-element identity table and initial formula parser (syntax tests added; execution verification pending).
 - [x] Implement bounded, deterministic composition enumeration (chemical plausibility filtering remains pending).
 - [x] Add initial composition-level electron-count and limited oxidation-state diagnostics (advisory only).
-- [x] Add a small offline reference-molecule catalogue with formula, synonym, and InChIKey lookup.\n- [ ] Expand structure generation and validation beyond the restricted prototype.
+- [x] Add a small offline reference-molecule catalogue with formula, synonym, and InChIKey lookup.
+- [ ] Expand structure generation and validation beyond the restricted prototype.
 - [ ] Add optional PubChem synchronization/import with rate limits, caching, and provenance retention.
 - [ ] Integrate the first calculation backend.
 - [ ] Build the first usable desktop workflow.
