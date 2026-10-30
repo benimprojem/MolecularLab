@@ -107,6 +107,62 @@ class KPointMesh:
 
 
 @dataclass(frozen=True, slots=True)
+class BandPathPoint:
+    """A reciprocal-space path vertex and number of samples to the next vertex."""
+    coordinates: tuple[float, float, float]
+    label: str
+    points_to_next: int = 20
+
+    def __post_init__(self) -> None:
+        coordinates = tuple(float(value) for value in self.coordinates)
+        if len(coordinates) != 3 or any(not isfinite(value) for value in coordinates):
+            raise ValueError("band-path coordinates must contain three finite values")
+        if not self.label.strip():
+            raise ValueError("band-path point label cannot be empty")
+        if isinstance(self.points_to_next, bool) or not isinstance(self.points_to_next, int) or self.points_to_next < 1:
+            raise ValueError("points_to_next must be a positive integer")
+        object.__setattr__(self, "coordinates", coordinates)
+
+
+@dataclass(frozen=True, slots=True)
+class BandPath:
+    """Ordered high-symmetry vertices in fractional reciprocal coordinates."""
+    points: tuple[BandPathPoint, ...]
+    coordinate_system: str = "crystal"
+
+    def __post_init__(self) -> None:
+        points = tuple(self.points)
+        if len(points) < 2 or any(not isinstance(point, BandPathPoint) for point in points):
+            raise ValueError("band path requires at least two BandPathPoint values")
+        if self.coordinate_system != "crystal":
+            raise ValueError("only fractional crystal reciprocal coordinates are supported")
+        object.__setattr__(self, "points", points)
+
+    @property
+    def sample_count(self) -> int:
+        return 1 + sum(point.points_to_next for point in self.points[:-1])
+
+
+@dataclass(frozen=True, slots=True)
+class DOSSettings:
+    """Explicit energy window and sampling for total DOS post-processing."""
+    energy_min_ev: float
+    energy_max_ev: float
+    points: int = 2001
+    broadening_ev: float = 0.05
+
+    def __post_init__(self) -> None:
+        if not isfinite(self.energy_min_ev) or not isfinite(self.energy_max_ev):
+            raise ValueError("DOS energy bounds must be finite")
+        if self.energy_max_ev <= self.energy_min_ev:
+            raise ValueError("DOS energy_max_ev must exceed energy_min_ev")
+        if isinstance(self.points, bool) or not isinstance(self.points, int) or self.points < 2:
+            raise ValueError("DOS points must be an integer of at least 2")
+        if not isfinite(self.broadening_ev) or self.broadening_ev <= 0:
+            raise ValueError("DOS broadening must be finite and positive")
+
+
+@dataclass(frozen=True, slots=True)
 class SmearingSettings:
     scheme: SmearingScheme
     width: EnergyCutoff
@@ -170,6 +226,8 @@ class DFTCalculationSettings:
     temperature_kelvin: float | None = None
     pressure_gpa: float | None = None
     band_path_ref: str = ""
+    band_path: BandPath | None = None
+    dos: DOSSettings | None = None
     notes: str = ""
 
     def __post_init__(self) -> None:
@@ -200,10 +258,18 @@ class DFTCalculationSettings:
             raise ValueError("temperature_kelvin must be finite and non-negative")
         if self.pressure_gpa is not None and not isfinite(self.pressure_gpa):
             raise ValueError("pressure_gpa must be finite")
-        if self.task == DFTTask.BANDS and not self.band_path_ref.strip():
-            raise ValueError("BANDS task requires an explicit band_path_ref")
-        if self.task != DFTTask.BANDS and self.band_path_ref:
-            raise ValueError("band_path_ref is only valid for a BANDS task")
+        if self.task is DFTTask.BANDS:
+            if self.band_path is None and not self.band_path_ref.strip():
+                raise ValueError("BANDS task requires an explicit BandPath or band_path_ref")
+            if self.band_path is not None and not isinstance(self.band_path, BandPath):
+                raise TypeError("band_path must be a BandPath")
+        elif self.band_path_ref or self.band_path is not None:
+            raise ValueError("band_path is only valid for a BANDS task")
+        if self.task is DFTTask.DOS:
+            if self.dos is None or not isinstance(self.dos, DOSSettings):
+                raise ValueError("DOS task requires explicit DOSSettings")
+        elif self.dos is not None:
+            raise ValueError("dos settings are only valid for a DOS task")
         object.__setattr__(self, "pseudopotentials", MappingProxyType(pseudo))
         object.__setattr__(self, "requested_outputs", outputs)
 
