@@ -1,15 +1,15 @@
 <!--
 Project: Molecular Lab
 Version: 0.1
-Rev.: 22
-Status: Initial SCF and fixed-cell RELAX execution for QE and GPAW
+Rev.: 23
+Status: SCF, fixed-cell RELAX and variable-cell VC_RELAX execution prototype for QE and GPAW
 -->
 
 # Molecular Lab
 
 **Molecular Lab** is a planned Windows desktop environment for exploring molecules, compounds, crystals, and functional materials through computational chemistry and materials-science workflows.
 
-> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, bounded composition enumeration, advisory composition diagnostics, restricted molecular graph prototypes, fused-benzenoid graph prototypes, a small offline reference-molecule catalogue, an optional RDKit graph-identification adapter, and a bounded forward-discovery pipeline. Material design/target records, frequency-dependent complex response records, explicit-criterion electrical behavior screening, spin-resolved band-structure and DOS result models, periodic crystal/site/defect records, backend-neutral periodic DFT settings, an optional ASE crystal-structure bridge, Quantum ESPRESSO input generation, GPAW calculator preparation, and a common explicit SCF/fixed-cell RELAX execution API are also implemented. The initial execution API returns total energies for SCF and final energy, optimized atomic coordinates, and per-site forces for successful fixed-cell RELAX runs. This is not yet a production calculation manager: variable-cell optimization, BANDS/DOS workflows, stability assessment, broad structure generation, job scheduling/cancellation, and actual experimental validation remain future work.
+> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, bounded composition enumeration, advisory composition diagnostics, restricted molecular graph prototypes, fused-benzenoid graph prototypes, a small offline reference-molecule catalogue, an optional RDKit graph-identification adapter, and a bounded forward-discovery pipeline. Material design/target records, frequency-dependent complex response records, explicit-criterion electrical behavior screening, spin-resolved band-structure and DOS result models, periodic crystal/site/defect records, backend-neutral periodic DFT settings, an optional ASE crystal-structure bridge, Quantum ESPRESSO input generation, GPAW calculator preparation, and a common explicit SCF/fixed-cell RELAX/variable-cell VC_RELAX execution API are also implemented. Structural runs return a separate optimized crystal structure, per-site forces, and—when requested—a normalized stress tensor in GPa. VC_RELAX requires explicit force and stress tolerances. This is not yet a production calculation manager: BANDS/DOS workflows, stability assessment, broad structure generation, job scheduling/cancellation, and actual experimental validation remain future work. No real QE/GPAW scientific run is implied by the automated tests.
 
 ## 1. Project goal
 
