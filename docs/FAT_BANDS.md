@@ -73,8 +73,8 @@ normalized scale without overwriting them.
 
 This first implementation supports collinear scalar-relativistic projections.
 Fully relativistic j-resolved and non-collinear/spinor formats, band
-interpolation, and automatic verification of k-point coordinate identity
-remain unsupported.
+interpolation, and automatic verification of the raw QE k-vector coordinate convention and
+band-crossing state tracking remain unsupported.
 
 
 ## Execution workflow
