@@ -1,4 +1,4 @@
-<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 01 | Status: Domain model specification -->
+<!-- Project: Molecular Lab | Version: 0.1 | Rev.: 02 | Status: Domain model specification -->
 
 # Chemical Model
 
@@ -165,4 +165,6 @@ At this stage it does not parse charge suffixes, isotope notation, hydrate separ
 
 ## 9. Implementation status
 
-This specification is being established before implementation. No chemistry validation, composition enumeration, structure generation, or stability calculation is claimed to exist yet.
+The current implementation includes element identity lookup, formula syntax parsing, bounded composition enumeration, and conservative composition-level diagnostics. The diagnostics calculate electron count/parity and attempt formal oxidation-state charge balance using a limited curated list of common states. They do not model bonds, geometry, electronic structure, thermodynamic stability, kinetic persistence, or experimental existence.
+
+A matching oxidation-state assignment is only a formal bookkeeping pattern, not evidence of a realizable compound. Failure to find an assignment in the limited list is a review signal, not a rejection. Elements outside the curated list are reported as not assessed. Structure generation, geometry optimization, and stability calculations are not implemented.
