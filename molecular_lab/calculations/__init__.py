@@ -15,7 +15,8 @@ from molecular_lab.calculations.ase_bridge import (
 )
 from molecular_lab.calculations.quantum_espresso import (
     PreparedQEInput, PreparedQEDOSInput, QuantumEspressoInputError,
-    prepare_pw_input, prepare_qe_dos_postprocess_input,
+    prepare_pw_input, prepare_qe_bands_postprocess_input,
+    prepare_qe_dos_postprocess_input,
 )
 from molecular_lab.calculations.gpaw import (
     GPAWInputError, GPAWUnavailableError, PreparedGPAWInput,
@@ -35,7 +36,8 @@ __all__ = [
     "EnergyCutoff", "EnergyUnit", "KPointMesh", "KPointScheme",
     "PseudopotentialReference", "SmearingScheme", "SmearingSettings",
     "PreparedQEInput", "PreparedQEDOSInput", "QuantumEspressoInputError",
-    "prepare_pw_input", "prepare_qe_dos_postprocess_input",
+    "prepare_pw_input", "prepare_qe_bands_postprocess_input",
+    "prepare_qe_dos_postprocess_input",
     "GPAWInputError", "GPAWUnavailableError", "PreparedGPAWInput",
     "build_optimization_target", "create_gpaw_calculator", "prepare_gpaw_input",
     "DFTExecutionResult", "DFTExecutionStatus",
