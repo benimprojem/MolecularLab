@@ -2,7 +2,7 @@
 Integrated forward molecular discovery workflow.
 
 Version: 0.1
-Rev.: 01
+Rev.: 02
 Status: First end-to-end composition-to-graph pipeline.
 
 This workflow combines bounded composition enumeration, advisory diagnostics,
@@ -59,6 +59,7 @@ def iter_forward_discovery(
     max_compositions: int = 1000,
     max_graphs_per_composition: int = 100,
     max_heavy_atoms: int = 8,
+    max_graph_assignments: int = 100000,
 ) -> Iterator[ForwardDiscoveryResult]:
     """
     Run the first integrated forward-discovery workflow.
@@ -75,6 +76,7 @@ def iter_forward_discovery(
         ("max_compositions", max_compositions),
         ("max_graphs_per_composition", max_graphs_per_composition),
         ("max_heavy_atoms", max_heavy_atoms),
+        ("max_graph_assignments", max_graph_assignments),
     ):
         if isinstance(value, bool) or not isinstance(value, int) or value < 1:
             raise ValueError(f"{name} must be a positive integer")
@@ -128,6 +130,7 @@ def iter_forward_discovery(
                     composition,
                     max_candidates=max_graphs_per_composition,
                     max_heavy_atoms=max_heavy_atoms,
+                    max_assignments=max_graph_assignments,
                 )
             )
             identifications = tuple(
