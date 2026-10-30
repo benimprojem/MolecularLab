@@ -2,7 +2,7 @@
 Tests for the restricted saturated acyclic molecular graph prototype.
 
 Version: 0.1
-Rev.: 00
+Rev.: 01
 """
 
 from collections import Counter
@@ -43,15 +43,17 @@ def test_methane_graph_is_proposed():
 def test_c2h6o_connectivity_isomers_are_proposed():
     graphs = list(iter_saturated_acyclic_graphs(parse_formula("C2H6O")))
     assert len(graphs) == 2
-    oxygen_degrees = []
+    oxygen_heavy_degrees = []
     for graph in graphs:
         oxygen_id = next(atom.atom_id for atom in graph.atoms if atom.element == "O")
-        oxygen_degrees.append(sum(
+        heavy_ids = {atom.atom_id for atom in graph.atoms if atom.element != "H"}
+        oxygen_heavy_degrees.append(sum(
             1 for bond in graph.bonds
             if oxygen_id in (bond.atom_a, bond.atom_b)
+            and bond.atom_a in heavy_ids and bond.atom_b in heavy_ids
         ))
-    # Ethanol has terminal O; dimethyl ether has O between two carbons.
-    assert sorted(oxygen_degrees) == [1, 2]
+    # Ethanol has one heavy-atom neighbour; dimethyl ether has two.
+    assert sorted(oxygen_heavy_degrees) == [1, 2]
 
 
 def test_unsupported_formula_is_not_misreported_as_impossible():
