@@ -3,7 +3,7 @@
 Version: 0.1 | Rev.: 04
 """
 
-from molecular_lab.calculations.pdos_analysis import (\n    ProjectedDOSAggregate, aggregate_projected_dos, integrate_pdos_window,\n)\nfrom molecular_lab.calculations.dft_settings import (
+from molecular_lab.calculations.pdos_analysis import (\n    PDOSWindowSummary, ProjectedDOSAggregate, aggregate_projected_dos,\n    integrate_pdos_window, summarize_pdos_window,\n)\nfrom molecular_lab.calculations.dft_settings import (
     BandPath, BandPathPoint, ConvergenceSettings, DOSSettings,
     DFTCalculationSettings, DFTOutput, DFTTask, EnergyCutoff, EnergyUnit,
     KPointMesh, KPointScheme, PseudopotentialReference,
@@ -35,7 +35,7 @@ from molecular_lab.calculations.execution import (
 )
 
 __all__ = [
-    "ProjectedDOSAggregate", "aggregate_projected_dos", "integrate_pdos_window",\n    "ASEBridgeError", "ASEUnavailableError", "ASEUnsupportedStructureError",
+    "PDOSWindowSummary", "ProjectedDOSAggregate", "aggregate_projected_dos",\n    "integrate_pdos_window", "summarize_pdos_window",\n    "ASEBridgeError", "ASEUnavailableError", "ASEUnsupportedStructureError",
     "ase_availability", "to_ase_atoms",
     "BandPath", "BandPathPoint", "ConvergenceSettings", "DOSSettings",
     "DFTCalculationSettings", "DFTOutput", "DFTTask",
