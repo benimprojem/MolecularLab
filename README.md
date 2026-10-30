@@ -1,15 +1,15 @@
 <!--
 Project: Molecular Lab
 Version: 0.1
-Rev.: 18
-Status: Early foundation with DFT input settings and calculation orchestration contracts
+Rev.: 19
+Status: Early foundation with ASE bridge and Quantum ESPRESSO input-deck generation
 -->
 
 # Molecular Lab
 
 **Molecular Lab** is a planned Windows desktop environment for exploring molecules, compounds, crystals, and functional materials through computational chemistry and materials-science workflows.
 
-> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, a bounded composition enumerator, advisory composition diagnostics, restricted bond-order-aware acyclic and unicyclic molecular graph prototypes, registered fused-benzenoid graph prototypes including anthracene and phenanthrene, a small offline reference-molecule catalogue, an optional RDKit graph-identification adapter, and an integrated bounded forward-discovery pipeline. Material design/target records, frequency-dependent complex response records, explicit-criterion electrical behavior screening, spin-resolved band-structure and DOS result models with direct/indirect gap screening, periodic crystal/site/defect records, backend-neutral periodic DFT input settings, an optional ASE crystal-structure bridge, and a common solver orchestration protocol carrying structured electronic outputs are also implemented. These are data and software contracts, not evidence that external scientific solvers have run. General structure generation beyond the bounded prototypes, geometry optimization, stability assessment, production solver adapters, and actual material-property calculations are not implemented yet.
+> **Project status:** Early foundation. The repository includes the initial domain records, 118-element identity data, a syntax-level chemical formula parser, a bounded composition enumerator, advisory composition diagnostics, restricted bond-order-aware acyclic and unicyclic molecular graph prototypes, registered fused-benzenoid graph prototypes including anthracene and phenanthrene, a small offline reference-molecule catalogue, an optional RDKit graph-identification adapter, and an integrated bounded forward-discovery pipeline. Material design/target records, frequency-dependent complex response records, explicit-criterion electrical behavior screening, spin-resolved band-structure and DOS result models with direct/indirect gap screening, periodic crystal/site/defect records, backend-neutral periodic DFT input settings, an optional ASE crystal-structure bridge, a Quantum ESPRESSO `pw.x` input-deck writer, and a common solver orchestration protocol carrying structured electronic outputs are also implemented. These are data and software contracts and input-generation tools, not evidence that external scientific solvers have run. General structure generation beyond the bounded prototypes, geometry optimization execution, stability assessment, production solver execution adapters, and actual material-property calculations are not implemented yet.
 
 ## 1. Project goal
 
@@ -63,7 +63,7 @@ The initial common solver orchestration contract lives in `molecular_lab/engines
 
 Each backend must declare the domains and methods it supports and report whether its software is actually available. The registry dispatches only compatible requests and returns explicit unsupported/unavailable/failed states rather than fabricating outputs.
 
-The protocol and DFT settings are foundations only. Production solver adapters, job scheduling, cancellation, and physical calculations remain future work. DFT input fields, units, validation, and current limits are described in [docs/DFT_SETTINGS.md](docs/DFT_SETTINGS.md); the optional ASE conversion contract is described in [docs/ASE_BRIDGE.md](docs/ASE_BRIDGE.md). Electronic-structure result schemas and their limits are described in [docs/ELECTRONIC_STRUCTURE.md](docs/ELECTRONIC_STRUCTURE.md) and [docs/CRYSTAL_STRUCTURES.md](docs/CRYSTAL_STRUCTURES.md). See also [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/METAMATERIALS.md](docs/METAMATERIALS.md).
+Backend-neutral DFT settings are described in [docs/DFT_SETTINGS.md](docs/DFT_SETTINGS.md). The optional ASE conversion contract is described in [docs/ASE_BRIDGE.md](docs/ASE_BRIDGE.md). The initial Quantum ESPRESSO input writer and its limitations are documented in [docs/QUANTUM_ESPRESSO.md](docs/QUANTUM_ESPRESSO.md). Electronic-structure result schemas and their limits are described in [docs/ELECTRONIC_STRUCTURE.md](docs/ELECTRONIC_STRUCTURE.md) and [docs/CRYSTAL_STRUCTURES.md](docs/CRYSTAL_STRUCTURES.md). See also [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/METAMATERIALS.md](docs/METAMATERIALS.md).
 
 ## 5. Large systems and metamaterials
 
@@ -86,7 +86,7 @@ Metamaterials are modeled as periodic geometries linked to constituent materials
 - `molecular_lab/core/` — foundational domain models.
 - `molecular_lab/chemistry/` — element data, formula parsing, and chemical diagnostics.
 - `molecular_lab/engines/` — discovery engines and calculation orchestration.
-- `molecular_lab/calculations/` — backend-neutral calculation settings and future solver adapters.
+- `molecular_lab/calculations/` — backend-neutral calculation settings, ASE conversion, and solver input adapters.
 - `molecular_lab/materials/` — metamaterial, electronic-structure, response, and classification records.
 - `docs/` — architecture and scientific design notes.
 - `tests/` — automated tests.
