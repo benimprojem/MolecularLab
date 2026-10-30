@@ -41,6 +41,7 @@ def test_silicon_smoke_test_path_has_expected_fractional_vertices_and_sample_cou
     ]
 
 
-def test_silicon_smoke_test_path_rejects_non_positive_subdivisions():
+@pytest.mark.parametrize("invalid", [0, -1, 1.5, True])
+def test_silicon_smoke_test_path_rejects_invalid_subdivisions(invalid):
     with pytest.raises(ValueError, match="positive integer"):
-        EXAMPLE.build_silicon_band_path(0)
+        EXAMPLE.build_silicon_band_path(invalid)
