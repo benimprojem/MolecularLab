@@ -3,7 +3,7 @@ Restricted acyclic molecular graph proposal engines.
 
 Version: 0.1
 Rev.: 01
-Status: Saturated and bond-order-aware acyclic prototypes.
+Status: Saturated, bond-order-aware acyclic, and bounded unicyclic prototypes.
 
 The generators propose connectivity only. They do not establish geometry,
 energetics, stability, experimental existence, or synthesis feasibility.
@@ -22,7 +22,7 @@ _SUPPORTED_VALENCES = {"H": 1, "C": 4, "N": 3, "O": 2, "F": 1, "Cl": 1}
 _LIMITATIONS = (
     "Neutral species only; charged and radical states are not generated.",
     "Fixed common valences are used for H, C, N, O, F, and Cl only.",
-    "Acyclic connected heavy-atom skeletons only; rings and cages are outside scope.",
+    "Acyclic and unicyclic connected heavy-atom skeletons are supported by separate generators; fused and multi-ring systems remain outside scope.",
     "Aromaticity, resonance, hypervalence, coordination chemistry, and variable valence are outside scope.",
     "A graph proposal is not a 3D geometry, stability result, or synthesis prediction.",
 )
@@ -247,3 +247,86 @@ def iter_acyclic_graphs(
             emitted += 1
             if emitted >= max_candidates:
                 return
+
+
+def iter_unicyclic_graphs(
+    composition: Composition,
+    *,
+    max_candidates: int = 1000,
+    max_heavy_atoms: int = 8,
+    max_assignments: int = 100000,
+) -> Iterator[MolecularGraph]:
+    """
+    Yield neutral connected heavy-atom graphs containing exactly one independent
+    cycle. The heavy-atom skeleton is constructed by adding one chord to a tree;
+    single, double, and triple bond orders are considered under fixed valences.
+
+    This covers simple rings and ring-plus-acyclic-substituent topologies, but
+    not fused, bridged, or multi-ring systems.
+    """
+    _validate_limits(max_candidates, max_heavy_atoms)
+    if isinstance(max_assignments, bool) or not isinstance(max_assignments, int) or max_assignments < 1:
+        raise ValueError("max_assignments must be a positive integer")
+    elements = _heavy_elements(composition, max_heavy_atoms)
+    if elements is None or len(elements) < 3:
+        return
+
+    target_h = composition.counts.get("H", 0)
+    emitted = 0
+    examined = 0
+    seen: set[tuple] = set()
+
+    # A connected unicyclic graph is a spanning tree plus one non-tree edge.
+    # Repeated constructions are removed by the element-aware canonical key.
+    for tree in _prufer_trees(len(elements)):
+        tree_pairs = {tuple(sorted(edge)) for edge in tree}
+        missing_edges = tuple(
+            (a, b)
+            for a in range(len(elements))
+            for b in range(a + 1, len(elements))
+            if (a, b) not in tree_pairs
+        )
+        for chord in missing_edges:
+            topology = tuple(sorted((*tree, chord)))
+            order_options = product((1, 2, 3), repeat=len(topology))
+            for orders in order_options:
+                examined += 1
+                if examined > max_assignments:
+                    return
+
+                used = [0] * len(elements)
+                weighted_edges = tuple(
+                    (a, b, order) for (a, b), order in zip(topology, orders)
+                )
+                for a, b, order in weighted_edges:
+                    used[a] += order
+                    used[b] += order
+                if any(
+                    used[i] > _SUPPORTED_VALENCES[element]
+                    for i, element in enumerate(elements)
+                ):
+                    continue
+
+                attached_h = tuple(
+                    _SUPPORTED_VALENCES[element] - used[i]
+                    for i, element in enumerate(elements)
+                )
+                if sum(attached_h) != target_h:
+                    continue
+
+                signature = _canonical_signature(
+                    elements, weighted_edges, attached_h
+                )
+                if signature in seen:
+                    continue
+                seen.add(signature)
+
+                yield _build_graph(
+                    elements,
+                    weighted_edges,
+                    attached_h,
+                    "bounded_unicyclic_bond_order_graph_v1",
+                )
+                emitted += 1
+                if emitted >= max_candidates:
+                    return
