@@ -87,6 +87,8 @@ def _validate_request(
     }.get(settings.task, set())
     unsupported = set(settings.requested_outputs).difference(allowed)
     if unsupported:
+        if settings.task is DFTTask.SCF:
+            raise ValueError("SCF execution currently supports total energy only, with optional stress")
         raise ValueError(
             f"{settings.task.value} execution does not support requested outputs: "
             + ", ".join(sorted(item.value for item in unsupported))
