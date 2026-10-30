@@ -652,6 +652,9 @@ def execute_qe_bands(
             backend_version=scf_result.backend_version,
         )
     (workdir / "tmp").mkdir(exist_ok=True)
+    gnu_path = workdir / (output_file + ".gnu")
+    if gnu_path.exists():
+        gnu_path.unlink()
     bands_run, error = _run_qe_input(
         executable, bands_input.input_text, workdir=workdir,
         timeout_seconds=timeout_seconds, command_prefix=command_prefix,
@@ -664,7 +667,6 @@ def execute_qe_bands(
     )
     if error is not None:
         return replace(error, message="BANDS workflow stopped at bands.x stage: " + error.message)
-    gnu_path = workdir / (output_file + ".gnu")
     if not gnu_path.is_file():
         return DFTExecutionResult(
             "quantum_espresso", DFTExecutionStatus.FAILED,
@@ -701,6 +703,9 @@ def execute_qe_bands(
     fat_band_data = None
     last_run = post_run
     if wants_fatband:
+        projection_xml = workdir / "tmp" / "molecular_lab.save" / "atomic_proj.xml"
+        if projection_xml.exists():
+            projection_xml.unlink()
         projection_run, error = _run_qe_input(
             projwfc_executable, projection_input.input_text, workdir=workdir,
             timeout_seconds=timeout_seconds, command_prefix=command_prefix,
@@ -708,7 +713,6 @@ def execute_qe_bands(
         if error is not None:
             return replace(error, message="BANDS workflow stopped at projwfc.x stage: " + error.message)
         last_run = projection_run
-        projection_xml = workdir / "tmp" / "molecular_lab.save" / "atomic_proj.xml"
         if not projection_xml.is_file():
             return DFTExecutionResult(
                 "quantum_espresso", DFTExecutionStatus.FAILED,
