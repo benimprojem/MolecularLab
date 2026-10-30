@@ -276,6 +276,53 @@ def iter_unicyclic_graphs(
     examined = 0
     seen: set[tuple] = set()
 
+    # Enumerate simple cycles first. This ensures compact rings (including
+    # Kekule representations of aromatic systems) are not hidden behind the
+    # much larger spanning-tree-plus-chord search space.
+    for ring_elements in sorted(set(permutations(elements))):
+        ring_topology = tuple(
+            (i, (i + 1) % len(ring_elements))
+            for i in range(len(ring_elements))
+        )
+        for orders in product((1, 2, 3), repeat=len(ring_topology)):
+            examined += 1
+            if examined > max_assignments:
+                return
+            used = [0] * len(ring_elements)
+            weighted_edges = tuple(
+                (a, b, order)
+                for (a, b), order in zip(ring_topology, orders)
+            )
+            for a, b, order in weighted_edges:
+                used[a] += order
+                used[b] += order
+            if any(
+                used[i] > _SUPPORTED_VALENCES[element]
+                for i, element in enumerate(ring_elements)
+            ):
+                continue
+            attached_h = tuple(
+                _SUPPORTED_VALENCES[element] - used[i]
+                for i, element in enumerate(ring_elements)
+            )
+            if sum(attached_h) != target_h:
+                continue
+            signature = _canonical_signature(
+                ring_elements, weighted_edges, attached_h
+            )
+            if signature in seen:
+                continue
+            seen.add(signature)
+            yield _build_graph(
+                ring_elements,
+                weighted_edges,
+                attached_h,
+                "bounded_unicyclic_bond_order_graph_v1",
+            )
+            emitted += 1
+            if emitted >= max_candidates:
+                return
+
     # A connected unicyclic graph is a spanning tree plus one non-tree edge.
     # Repeated constructions are removed by the element-aware canonical key.
     for tree in _prufer_trees(len(elements)):
