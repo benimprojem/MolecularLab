@@ -3,10 +3,12 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+from collections.abc import Mapping
 
 from molecular_lab.materials.electronic_structure import (
     BandChannelData, BandStructureData, DensityOfStatesChannel,
-    DensityOfStatesData, KPoint,
+    DensityOfStatesData, KPoint, ProjectedDOSComponent,
+    ProjectedDOSRecord, ProjectedDensityOfStatesData,
 )
 
 
@@ -121,3 +123,122 @@ def parse_qe_total_dos(
 
 def read_qe_total_dos(path: str | Path, **kwargs) -> DensityOfStatesData:
     return parse_qe_total_dos(Path(path).read_text(encoding="utf-8"), **kwargs)
+
+
+_QE_PDOS_FILE_RE = re.compile(
+    r"^.+\\.pdos_atm#(?P<atom>\\d+)\\((?P<element>[^)]+)\\)"
+    r"_wfc#(?P<wfc>\\d+)\\((?P<orbital>[spdf])\\)$",
+    re.IGNORECASE,
+)
+
+
+def _qe_orbital_component_labels(angular_momentum: int) -> tuple[str, ...]:
+    labels = ["m=0"]
+    for magnetic_number in range(1, angular_momentum + 1):
+        labels.extend((f"m={magnetic_number}, cos(phi)", f"m={magnetic_number}, sin(phi)"))
+    return tuple(labels)
+
+
+def parse_qe_projected_dos(
+    files: Mapping[str, str],
+    *,
+    spin_polarized: bool = False,
+    fermi_level_ev: float | None = None,
+    backend_version: str = "",
+    notes: tuple[str, ...] = (),
+) -> ProjectedDensityOfStatesData:
+    """Parse projwfc.x atomic-wavefunction PDOS files keyed by basename.
+
+    Supports collinear scalar-relativistic s/p/d/f output. Fully relativistic
+    j-resolved and k-resolved files are deliberately rejected/not inferred.
+    """
+    if not isinstance(files, Mapping) or not files:
+        raise QEOutputParseError("No QE projected-DOS files were supplied")
+    parsed: list[ProjectedDOSRecord] = []
+    reference_energies: tuple[float, ...] | None = None
+    expected_columns = None
+    for filename, content in sorted(files.items()):
+        basename = Path(filename).name
+        if ".pdos_atm#" not in basename:
+            continue
+        match = _QE_PDOS_FILE_RE.fullmatch(basename)
+        if match is None:
+            raise QEOutputParseError(
+                f"Unsupported QE PDOS filename (j-resolved or unknown format): {basename}"
+            )
+        atom_index = int(match.group("atom"))
+        element = match.group("element")
+        wavefunction_index = int(match.group("wfc"))
+        orbital = match.group("orbital").lower()
+        angular_momentum = {"s": 0, "p": 1, "d": 2, "f": 3}[orbital]
+        component_count = 2 * angular_momentum + 1
+        required = 2 + component_count * (2 if spin_polarized else 1)
+        rows: list[list[float]] = []
+        for raw in content.splitlines():
+            line = raw.strip()
+            if not line or line.startswith(("#", "!", "&")):
+                continue
+            try:
+                values = [_float(value) for value in line.split()]
+            except ValueError:
+                continue
+            if len(values) < required:
+                raise QEOutputParseError(
+                    f"{basename} has {len(values)} columns; expected at least {required}"
+                )
+            rows.append(values)
+        if len(rows) < 2:
+            raise QEOutputParseError(f"{basename} contains fewer than two usable energy samples")
+        energies = tuple(row[0] for row in rows)
+        if any(b <= a for a, b in zip(energies, energies[1:])):
+            raise QEOutputParseError(f"{basename} energy grid must be strictly increasing")
+        if reference_energies is None:
+            reference_energies = energies
+        elif len(energies) != len(reference_energies) or any(
+            abs(a - b) > 1e-8 for a, b in zip(energies, reference_energies)
+        ):
+            raise QEOutputParseError("QE PDOS files do not share a common energy grid")
+        labels = _qe_orbital_component_labels(angular_momentum)
+        spin_names = ("spin_up", "spin_down") if spin_polarized else ("total",)
+        for spin_index, spin_name in enumerate(spin_names):
+            if spin_polarized:
+                local_column = 1 + spin_index
+                component_start = 3 + spin_index
+            else:
+                local_column = 1
+                component_start = 2
+            local_values = tuple(row[local_column] for row in rows)
+            components = tuple(
+                ProjectedDOSComponent(
+                    component_index=index,
+                    component_label=labels[index],
+                    density_states_per_ev=tuple(row[component_start + index * (2 if spin_polarized else 1)] for row in rows),
+                )
+                for index in range(component_count)
+            )
+            parsed.append(ProjectedDOSRecord(
+                atom_index=atom_index, element=element,
+                wavefunction_index=wavefunction_index,
+                angular_momentum=angular_momentum, spin_channel=spin_name,
+                local_dos_states_per_ev=local_values, components=components,
+            ))
+    if reference_energies is None or not parsed:
+        raise QEOutputParseError("No supported QE atomic PDOS files were found")
+    return ProjectedDensityOfStatesData(
+        energies_ev=reference_energies, records=tuple(parsed),
+        fermi_level_ev=fermi_level_ev,
+        method="Quantum ESPRESSO projwfc.x atomic PDOS",
+        backend="quantum_espresso", backend_version=backend_version,
+        notes=tuple(notes) + (
+            "Values are in states/eV; atomic projections are defined by the supplied pseudopotentials.",
+            "Orbital components retain QE's angular-component ordering; labels are not assumed to be global Cartesian d-orbital names.",
+            "Only collinear scalar-relativistic s/p/d/f files are parsed; j-resolved and k-resolved formats are unsupported.",
+        ),
+    )
+
+
+def read_qe_projected_dos(
+    paths: list[str | Path] | tuple[str | Path, ...], **kwargs
+) -> ProjectedDensityOfStatesData:
+    files = {Path(path).name: Path(path).read_text(encoding="utf-8") for path in paths}
+    return parse_qe_projected_dos(files, **kwargs)
