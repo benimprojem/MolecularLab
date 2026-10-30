@@ -38,3 +38,10 @@ The normalization must state whether DOS is per cell, atom, formula unit, or ano
 Implemented: standard-library records, validation, and tests for k-points, spin-resolved bands, occupation arrays, direct/indirect gap screening, and total/projected DOS grids.
 
 Partially implemented: Quantum ESPRESSO input preparation for a structured BANDS path and total-DOS NSCF/dos.x workflow. Not implemented: BANDS/DOS process orchestration and output parsers for QE/GPAW, construction of normalized result records from solver output, band interpolation, projected-DOS adapters, effective masses, Fermi-surface analysis, optical transitions, or actual DFT execution.
+
+
+## Quantum ESPRESSO output ingestion
+
+The QE adapter's parsed BANDS result currently uses the .gnu output produced by bands.x. Its first column is cumulative path distance, not a Cartesian or fractional reciprocal vector; the common KPoint record therefore includes a coordinate-system label. The energies are stored in eV.
+
+The total-DOS parser reads the energy and DOS columns in eV and states/eV. Spin-polarized tables are represented as separate up/down channels. Integrated-DOS columns are ignored because the current common DOS model does not yet carry integrated counts. The parser attaches a Fermi level only when explicitly reported; it does not synthesize a mid-gap reference.
